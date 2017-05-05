@@ -1,0 +1,38 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Make an Exam</title>
+   	<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="../css/select-questions.css">
+		<script type="text/javascript" src="../js/shared.js"></script>
+		<script type="text/javascript" src="../js/select-questions.js"></script>
+	</head>
+	<body>
+		<div id="navbar">
+			<div id="logo" onclick="goHome()">&#x270e;</div>
+			<a id="logout" onclick="logout()">Logout</a>
+		</div>
+		<div id="container">
+			<div id="message-view" class="closed" onclick="closeMessage()"></div>
+			<div class="select-group">
+				<label > Filter By <select id="select-difficulty" onchange="onDifficultySelect(event)"></select>
+						<select id="select-type" onchange="onTypeSelect(event)"></select></label>
+			</div>
+			<div id="row-view">
+				<div id="question-bank-view">
+					<h3 class="titles">Question Bank</h3>
+				</div>
+				<div id="questions-selected-view">
+					<h3 class="titles">Question Pool</h3>
+				</div>
+			</div>
+			<br />
+			<div class="section">
+				<input type="text" id="exam-name" placeholder="Exam Name" onchange="removeValidation(event)"/>
+				<div id="max-grade">Maximum Grade: </div>
+				<div id="submit-button" onclick="onSubmit()">Make the Exam</div>
+			</div>
+
+		</div>
+  </body>
+</html>

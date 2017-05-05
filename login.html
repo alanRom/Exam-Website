@@ -1,0 +1,41 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Login Page</title>
+		<link rel="stylesheet" type="text/css" href="css/login.css">
+		<script type="text/javascript" src="js/login.js"></script>
+   	<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<div id="login-page">
+			<div id="message-view" class="closed" onclick="closeMessage()"></div>
+			<h1 class="header"></h1>
+			<form id="login-form" method="POST" onsubmit="onSubmit(event)">
+			<div class="main-section">
+				<div class="blurred"></div>
+				<div class="content">
+  				<input type="text" placeholder="UCID" id="ID" name="ID" onchange="onTextChange(event)"></input>
+  				<p id="ID-error"></p>
+
+
+  				<input type="password" placeholder="Password" name="Password" id="Password" onchange="onTextChange(event)"></input>
+  				<p id="Password-error"></p>
+  				<button type="submit">Submit</button>
+        </div>
+			</div>
+			</form>
+
+			<div id="about-section">
+				<h3>About the Developers</h3>
+				<div>Alan Romano<br />
+					<div class="little-label">Front-end</div><br  />
+					Chris Etler<br />
+					<div class="little-label">Middle-end</div><br  />
+					Steven Youssef<br />
+					<div class="little-label">Back-end</div><br  />
+				</div>
+			</div>
+			<div id="about-indicator" onmouseenter="showSection()" onmouseleave="hideSection()"></div>
+		</div>
+	</body>
+</html>

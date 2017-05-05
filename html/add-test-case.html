@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Add a Test Case</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../css/add-test-case.css">
+	<script type="text/javascript" src="../js/shared.js"></script>
+	<script type="text/javascript" src="../js/add-test-case.js"></script>
+
+</head>
+
+<body>
+	<div id="navbar">
+		<div id="logo" onclick="goHome()">&#x270e;</div>
+		<div id="logout" onclick="logout()">Logout</div>
+	</div>
+	<div id="container">
+		<div id="message-view" class="closed" onclick="closeMessage()"></div>
+		<div class="select-group">
+			<label > Filter By <select id="select-difficulty" onchange="onDifficultySelect(event)"></select>
+			<select id="select-type" onchange="onTypeSelect(event)"></select></label>
+		</div>
+		<div id="question-bank-view">
+			<h3 class="titles" id="bank-header"></h3>
+			<div id="question-list"></div>
+		</div>
+		<div class="center">
+			<form>
+				<h3 id="question-header"></h3>
+				<div id="parameter-section">
+				</div>
+				<textarea id="Output" name="Output" placeholder="Output"></textarea>
+				<button type="submit" onclick="onSubmit(event)">Add the test case</button>
+			</form>
+			<div id="test-case-section">
+				<h3>Test Cases</h3>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>

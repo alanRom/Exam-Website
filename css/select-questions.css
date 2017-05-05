@@ -1,0 +1,130 @@
+@import "layout.css";
+
+#row-view{
+    display: flex;
+    width:100%;
+    flex-direction: row;
+}
+
+.titles{
+  margin: 10px auto;
+  text-align: center;
+}
+
+.question{
+  padding:10px 15px;
+  width: calc(100% - 30px);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.question-in-pool{
+  padding:10px 5px;
+  width:calc(90% - 15px);
+  display:inline-block;
+  font-size: 16px;
+  cursor: pointer;
+}
+.question:hover{
+  background-color: rgba(0,0,0,0.2);
+}
+
+
+
+#question-bank-view,#questions-selected-view{
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
+  margin: 10px;
+  color:white;
+  background-color: #17181E;
+  border-radius: 2px;
+  box-shadow: 0 0 25px 4px rgba(0,0,0,0.3);
+  width: calc(50vw - 40px);
+  height: 65vh;
+}
+
+
+.select-group{
+  color:white;
+  font-size: 16px;
+  margin: 10px 30px;
+  margin-bottom: 0px;
+  display: inline;
+}
+
+
+.section{
+  width: 300px;
+  height: 92px;
+  display: block;
+  margin: 0 auto;
+  background-color: rgba(0,0,0,0.7);
+  border-radius: 2px;
+  padding: 10px;
+  box-shadow: 0 0 25px 4px rgba(0,0,0,0.3);
+}
+
+.reject{
+  border: 1px solid red;
+}
+
+#exam-name,#max-grade{
+  display: block;
+  margin: 8px auto;
+  padding:5px;
+  text-align: center;
+  color:white;
+}
+
+.wrapper{
+  display: inline-block;
+  width:100%;
+}
+.small-input{
+  display: inline;
+  width: 10%;
+  text-align: center;
+}
+
+#submit-button:hover{
+  background-color: #4d94ff;
+}
+#submit-button{
+  cursor: pointer;
+  border-radius:25px;
+  margin:0 auto;
+  display:block;
+  height:20px;
+  width:fit-content;
+  text-decoration: none;
+	font-size: 16px;
+	border:none;
+	background-color: #1a75ff;
+ 	color:white;
+	padding: 10px 15px;
+  box-shadow: 0 0 20px 2px rgba(0,0,0,0.3);
+}
+
+input{
+  background-color: #21242C;
+  border:none;
+  font-size: 16px;
+  color:white;
+}
+
+select{
+  text-align-last:center;
+  display: inline;
+  min-width: 80px;
+  width:fit-content;
+  font-family: Arial;
+  margin: 0 auto;
+  text-align: center;
+  border-radius: 2px;
+  color:white;
+  font-size: 16px;
+  padding:5px;
+  border:0px solid rgb(220,220,220);
+  background-color: #2c303a;
+}

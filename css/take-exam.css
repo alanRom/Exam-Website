@@ -1,0 +1,143 @@
+@import "layout.css";
+
+
+#question-view{
+  display: flex;
+  z-index: 0;
+  flex-direction: column;
+  line-height: 1.2em;
+  font-size: 16px;
+  position: relative;
+  width: 75%;
+  height:60vh;
+  margin: 10px auto;
+  background-color: #17181E;
+  border-radius: 2px;
+  padding: 10px;
+  box-shadow: 0 0 25px 4px rgba(0,0,0,0.3);
+  color: white;
+}
+
+#question-text{
+  width:calc(100% - 10px);
+  padding:5px;
+  margin:0 auto;
+  text-align: justify;
+  color: white;
+  overflow-y: auto;
+}
+
+#question-answer{
+  background-color: #21242C;
+  font-family: "Lucida Console", Monaco, monospace;
+  border:none;
+  padding:5px;
+  flex: 2 1 10%;
+  width:calc(100% - 10px);
+  min-height: 200px;
+  font-size: 16px;
+  color:white;
+  overflow-y: auto;
+}
+
+#button-section{
+  margin:0 auto;
+  width:70%;
+}
+#next,#previous{
+  float: right;
+  margin:0 8px;
+  cursor: pointer;
+  border-radius:25px;
+  display:inline-block;
+  height:40px;
+  width:90px;
+  text-decoration: none;
+	font-size: 16px;
+	border:none;
+	background-color: #1a75ff;
+ 	color:white;
+	padding: 10px 15px;
+  transition: background-color 0.3s ease-in 0s;
+}
+
+.disabled{
+  cursor:not-allowed !important;
+}
+
+@keyframes fadeAppear {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
+
+#modal{
+  background-color: rgba(0,0,0,0.6);
+  display: block;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  position: fixed;
+  width: 100%;
+  height:100%;
+}
+
+#modal-content{
+  position: relative;
+  width: 30%;
+  color: white;
+  margin: 20% auto;
+  z-index: 4;
+  background-color: #282A2C;
+  overflow: visible;
+  border-radius: 3px;
+  animation-name: fadeAppear;
+  animation-duration: 0.5s;
+}
+#modal-footer{
+  padding: 7px 5px;
+  border-radius: 0 0 3px 3px;
+  background-color: #474A4D;
+
+}
+#modal-text{
+  padding: 15px;
+  padding-bottom: 5px;
+  text-align: center;
+}
+
+#confirm-button,#cancel-button{
+  text-align: center;
+  margin:0 5px;
+  bottom: 0;
+  cursor: pointer;
+  border-radius:25px;
+  display:inline-block;
+  height:20px;
+  width:55px;
+  text-decoration: none;
+  font-size: 16px;
+  border:none;
+  	color:white;
+  padding: 10px 15px;
+}
+#confirm-button{
+  background-color: #0150C5;
+}
+#cancel-button{
+  background-color: #400692;
+}
+
+#button-group{
+  margin: 0 auto;
+  width: 195px;
+}
+
+@media screen and (min-width: 1200px){
+  #question-view{
+      width: 1150px;
+      margin: 10px auto;
+  }
+  #button-section{
+    width: 1150px;
+  }
+}

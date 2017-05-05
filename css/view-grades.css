@@ -1,0 +1,142 @@
+@import "layout.css";
+#exam-view {}
+
+#main-grade {
+    width: fit-content;
+    text-align: center;
+    font-size: 10em;
+    margin: 10px auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 2px;
+    padding: 10px;
+    box-shadow: 0 0 25px 4px rgba(0, 0, 0, 0.3);
+    color: white;
+}
+
+#questions-view {
+    width: 80%;
+    margin: 20px auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 2px;
+    padding: 10px;
+    box-shadow: 0 0 25px 4px rgba(0, 0, 0, 0.3);
+    color: white;
+}
+
+.question {
+    height: fit-content;
+    border: none;
+    border-bottom: 1px dashed #C9CBCF;
+    text-align: center;
+    line-height: 1.2;
+    padding: 5px;
+    margin: 5px;
+}
+
+.question-string {
+    margin: 8px 0;
+}
+.question-user-input {
+    background-color: rgba(255,255,255, 0.1);
+    font-family: monospace;
+    line-height: 1.5;
+    margin: 10px 0;
+    text-align: left;
+}
+.question-header {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.show-result, .show-table {
+    cursor: pointer;
+    text-decoration: underline;
+    color: blue;
+}
+
+.compile-result {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 10px 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out;
+    will-change: max-height;
+}
+
+
+.hidden {
+    max-height: 0;
+    transition: all 0.5s ease-in-out;
+    will-change:max-height;
+    overflow: hidden;
+}
+.show {
+    max-height: 600px;
+    padding: 10px;
+
+}
+.compile-result, .question-user-input{
+  white-space: pre;
+ }
+
+
+.test-case-header {
+    font-style: italic;
+    font-size: 18px;
+}
+
+
+
+#questions-view:empty, #main-grade:empty {
+    display: none;
+}
+
+.table-header{
+  background-color: #333333;
+  border:1px solid white;
+}
+.left-align{
+  width: 200px;
+  text-align: left;
+}
+.feedback{
+  padding: 10px 0;
+}
+
+td, th {
+    border-bottom: 1px dashed white;
+    padding: 10px;
+}
+
+tr:nth-child(even) {
+    background-color: #21232b;
+}
+
+tr:hover {
+    background-color: #373a48;
+}
+
+thead {
+    border-bottom: 1px solid white;
+}
+
+thead:hover {}
+
+table {
+    border-collapse: collapse;
+    width: 80%;
+    margin: 20px auto;
+    height: 100%;
+}
+
+
+
+.color-pass {
+    background-color: green;
+}
+
+.color-fail {
+    background-color: red;
+}

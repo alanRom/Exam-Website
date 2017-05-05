@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Add a New Question</title>
+   	<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="../css/add-question.css">
+		<script type="text/javascript" src="../js/shared.js"></script>
+		<script type="text/javascript" src="../js/add-question.js"></script>
+
+	</head>
+	<body>
+		<div id="navbar">
+			<div id="logo" onclick="goHome()">&#x270e;</div>
+			<div id="logout" onclick="logout()">Logout</div>
+		</div>
+		<div id="container">
+			<div id="message-view" class="closed" onclick="closeMessage()"></div>
+
+			<div id="column-view">
+				<div class="select-group">
+					<label > Filter By <select id="select-difficulty" onchange="onDifficultySelect(event)"></select>
+					 <select id="select-type" onchange="onTypeSelect(event)"></select></label>
+				</div>
+				<div id="question-bank-view">
+					<h3>Question Bank</h3>
+					<div id="question-list"></div>
+				</div>
+
+				<form name="add-question-form" onsubmit="onSubmit(event)">
+					Write a method named <input type="text" placeholder="Method Name" name="MethodName" onchange="removeValidation(event)"/>
+					that uses
+					<select name="Type" id="problem-type" onchange="removeValidation(event)">
+						<option value="" selected>Problem Type</option>
+					</select> and returns a
+					<select name="ReturnType" id="return-type" onchange="removeValidation(event)">
+						<option value="" selected>Function Return Type</option>
+					</select>. The function takes in as parameters
+					<div id="parameter-section">
+					</div>
+					and should do the following:
+					<textarea type="text" placeholder="Question" name="QuestionString" onchange="removeValidation(event)"></textarea>
+					<select name="Difficulty" id="difficulty-type" onchange="removeValidation(event)">
+						<option value="" selected>Question Difficulty</option>
+					</select>
+					<button type="submit">Submit</button>
+				</form>
+			</div>
+		</div>
+  </body>
+</html>
