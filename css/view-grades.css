@@ -23,7 +23,7 @@
     color: white;
 }
 
-.question {
+.question-block {
     height: fit-content;
     border: none;
     border-bottom: 1px dashed #C9CBCF;

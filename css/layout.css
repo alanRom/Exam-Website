@@ -13,7 +13,7 @@ body {
 }
 
 #loading-screen {
-    position: absolute;
+    position: fixed;
     background-color: inherit;
     width: inherit;
     height: inherit;
@@ -201,4 +201,10 @@ body {
     transform: translateX(-100%);
   }
 
+}
+
+.question{
+  padding:10px;
+  width:100%;
+  font-size: 16px;
 }

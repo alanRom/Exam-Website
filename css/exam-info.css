@@ -14,8 +14,10 @@
   color: white;
 }
 
-.question{
+.question-block
+{
   height: fit-content;
+  width: calc(100% - 20px)
   border:none;
   border-bottom: 1px dashed #C9CBCF;
   text-align: center;

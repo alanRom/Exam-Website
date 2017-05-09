@@ -1,0 +1,2002 @@
+./js/add-question.js
+---
+accessAllowed('i', sessionStorage.Instructor);
+
+let typeSelected = 'Type';
+let difficultySelected = 'All';
+const questionsSelected = [];
+const returnTypes = ['int', 'String', 'float', 'double', 'boolean', 'char', 'void'];
+const problemTypes = ['None', 'For', 'While', 'Recursion', 'Overload'];
+const difficultyOptions = [
+    {
+        val: 1,
+        label: 'Easy',
+    }, {
+        val: 2,
+        label: 'Medium',
+    }, {
+        val: 3,
+        label: 'Hard',
+    },
+];
+
+const QUESTION_INSERT_DIV = 'question-list';
+const QUESTION_BANK_DIV = 'question-bank-view';
+const PARAMETER_INSERT_DIV = 'parameter-section';
+
+const makeProblemOptions = () => {
+    let divString = '';
+    problemTypes.forEach((problem) => {
+        divString += `<option value=${problem}>${problem}</option>`;
+    });
+    return divString;
+};
+
+const makeReturnOptions = () => {
+    let divString = '';
+    returnTypes.forEach((type) => {
+        divString += `<option value=${type}>${type}</option>`;
+    });
+    return divString;
+};
+
+const addParameter = () => {
+    const parameterSection = document.getElementById(PARAMETER_INSERT_DIV);
+    for (let paramCount = 1; paramCount <= 4; paramCount += 1) {
+        const insertDiv = `
+          <select name="Param${paramCount}_Type" id="param${paramCount}_Type"
+            onchange="unlockParameters('${paramCount}');" ${paramCount !== 1 ? 'disabled' : ''}>
+            <option value="" selected>Parameter${paramCount} Type</option>
+              ${makeReturnOptions()}
+        </select>,`;
+
+        parameterSection.insertAdjacentHTML('beforeend', insertDiv);
+    }
+};
+
+const validation = () => {
+    const requiredFields = ['MethodName', 'Difficulty', 'Type', 'ReturnType', 'QuestionString'];
+    let accepted = true;
+    requiredFields.forEach((field) => {
+        const div = document.getElementsByName(field)[0];
+        if (div.value === '') {
+            div.classList.add('reject');
+            accepted = false;
+        } else {
+            div.classList.remove('reject');
+        }
+    });
+    return accepted;
+};
+
+const clearFields = () => {
+    const fields = [
+        'MethodName',
+        'Difficulty',
+        'Type',
+        'ReturnType',
+        'Param1_Type',
+        'Param2_Type',
+        'Param3_Type',
+        'Param4_Type',
+        'QuestionString',
+    ];
+    fields.forEach((field) => {
+        document.getElementsByName(field)[0].value = '';
+    });
+};
+
+const clearQuestionsBank = () => {
+    const deleteList = document.getElementById(QUESTION_INSERT_DIV).children;
+    for (let i = deleteList.length - 1; i >= 0; i -= 1) {
+        deleteList[i].parentNode.removeChild(deleteList[i]);
+    }
+};
+
+
+const addQuestionsToView = (questions) => {
+    const questionBank = document.getElementById(QUESTION_INSERT_DIV);
+    clearQuestionsBank();
+
+    questions.forEach((question) => {
+        const newDiv = document.createElement('div');
+        newDiv.innerText = question.QuestionString;
+        newDiv.className = 'question';
+        questionBank.appendChild(newDiv);
+    });
+
+    doneLoading();
+};
+
+const addSelectOptions = () => {
+    const problemDropdown = document.getElementById('problem-type');
+    const returnDropdown = document.getElementById('return-type');
+
+    const problemOptions = makeProblemOptions();
+    const returnOptions = makeReturnOptions();
+
+    problemDropdown.insertAdjacentHTML('beforeend', problemOptions);
+    returnDropdown.insertAdjacentHTML('beforeend', returnOptions);
+};
+const unlockParameters = (index) => {
+    if (index === '4') { return; }
+    document.getElementById(`param${parseInt(index, 10) + 1}_Type`).disabled = false; // unlock next parameter
+};
+
+const makeDifficultyOptions = () => {
+    const difficultyDropdown = document.getElementById('difficulty-type');
+    let divString = '';
+    difficultyOptions.forEach((type) => {
+        divString += `<option value=${type.val}>${type.label}</option>`;
+    });
+    difficultyDropdown.insertAdjacentHTML('beforeend', divString);
+};
+
+const onSelect = () => {
+    const difficulty = difficultySelected === 'All'
+        ? ''
+        : `${difficultySelected}`;
+    const type = typeSelected === 'Type'
+        ? ''
+        : `${typeSelected}`;
+    const postString = `Difficulty=${difficulty}&Type=${type}`;
+
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+
+    apiCall('getQuestions.php', postString).then(JSON.parse).then((questions) => {
+        if (questions.Questions === null) {
+            if (difficultySelected === 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${typeSelected} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} questions.`);
+            } else {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} ${typeSelected} questions.`);
+            }
+            doneLoading();
+            return;
+        }
+
+        closeMessage();
+        addQuestionsToView(questions.Questions);
+    });
+};
+
+const onDifficultySelect = (event) => {
+    difficultySelected = event.target.value;
+    onSelect();
+};
+
+const onTypeSelect = (event) => {
+    typeSelected = event.target.value;
+    onSelect();
+};
+
+
+const startup = (session) => {
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    makeDifficultyOptions();
+    addParameter();
+    addSelectOptions();
+    makeTypeFilterOptions();
+    makeDifficultyFilterOptions();
+
+    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
+        addQuestionsToView(questions.Questions);
+    });
+};
+
+const onSubmit = (e) => {
+    e.preventDefault();
+
+    const fields = [
+        'MethodName',
+        'Difficulty',
+        'Type',
+        'ReturnType',
+        'Param1_Type',
+        'Param2_Type',
+        'Param3_Type',
+        'Param4_Type',
+    ];
+
+    if (!validation()) {
+        showMessage('Sorry, but not all the fields were filled out');
+        return;
+    }
+    closeMessage();
+
+
+    const vowels = ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'];
+
+    const returnVal = document.getElementsByName('ReturnType')[0].value;
+    const returnString = vowels.includes(returnVal.charAt(0))
+        ? `an ${returnVal}`
+        : `a ${returnVal}`;
+
+    let params = [];
+    params[0] = document.getElementsByName('Param1_Type')[0].value;
+    params[1] = document.getElementsByName('Param2_Type')[0].value;
+    params[2] = document.getElementsByName('Param3_Type')[0].value;
+    params[3] = document.getElementsByName('Param4_Type')[0].value;
+
+    params = params.filter(param => param !== '');
+
+    let paramString = '';
+    if (params.length > 1) {
+        paramString = 'as parameters ';
+    } else {
+        paramString = 'as a parameter ';
+    }
+
+    if (params.length === 1) {
+        paramString += vowels.includes(params[0].charAt(0))
+            ? `an ${params[0]}`
+            : `a ${params[0]}`;
+    } else if (params.length === 2) {
+        const param1 = vowels.includes(params[0].charAt(0))
+            ? `an ${params[0]}`
+            : `a ${params[0]}`;
+        const param2 = vowels.includes(params[1].charAt(0))
+            ? `an ${params[1]}`
+            : `a ${params[1]}`;
+        paramString += `${param1} and ${param2}`;
+    } else if (params.length > 2) {
+        params.forEach((param, index) => {
+            if (index === params.length - 1) {
+                const lastParam = vowels.includes(param.charAt(0))
+                    ? `an ${param}`
+                    : `a ${param}`;
+                paramString += `and ${lastParam}`;
+            } else {
+                paramString += vowels.includes(param.charAt(0))
+                    ? `an ${param}, `
+                    : `a ${param}, `;
+            }
+        });
+    }
+
+    const problemType = document.getElementsByName('Type')[0].value === 'None'
+        ? ''
+        : `uses ${document.getElementsByName('Type')[0].value} and `;
+
+    const questionString = `Write a method named ${document.getElementsByName('MethodName')[0].value} that ${problemType}returns ${returnString}. The function takes in ${paramString} and should do the following: ${document.getElementsByName('QuestionString')[0].value}`;
+
+    let postString = fields.map(field => `${field}=${encodeURIComponent(document.getElementsByName(field)[0].value)}&`).reduce((acc, val) => acc + val, '&');
+    postString += `QuestionString=${encodeURIComponent(questionString)}`;
+    apiCall('addQuestion.php', postString).then(JSON.parse).then((res) => {
+        if (res.success) {
+            clearFields();
+            showMessage('Your question was created successfully. You should add some test cases now.');
+        } else {
+            showMessage('Sorry, there was an problem creating the question. Try again later.');
+        }
+    });
+};
+
+./js/add-test-case.js
+---
+accessAllowed('i', sessionStorage.Instructor);
+
+let questionsLoaded = null;
+const questionSelectedText = '';
+let questionSelected = '';
+let difficultySelected = 'All';
+let typeSelected = 'Type';
+let ucid = null;
+const problemTypes = ['None', 'For', 'While', 'Recursion', 'Overload'];
+const difficultyOptions = [{ val: 1, label: 'Easy' }, { val: 2, label: 'Medium' }, { val: 3, label: 'Hard' }];
+const returnTypes = ['int', 'String', 'float', 'double', 'boolean'];
+
+const QUESTION_INSERT_DIV = 'question-list';
+const QUESTION_BANK_DIV = 'question-bank-view';
+
+const getQuestionIndex = (id) => {
+    for (let i = questionsLoaded.length - 1; i >= 0; i -= 1) {
+        if (questionsLoaded[i].id === id) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+const changeHeader = () => {
+    document.getElementById('question-header').innerText = `${questionsLoaded[getQuestionIndex(questionSelected)].QuestionString}`;
+};
+
+const getAvailableParams = (id) => {
+    const question = questionsLoaded[getQuestionIndex(id)];
+
+    const params = ['Param1_Type', 'Param2_Type', 'Param3_Type', 'Param4_Type'];
+
+    return params.map((param, index) => {
+        if (question[param] !== '') {
+            return index + 1;
+        }
+
+        return undefined;
+    }).filter(param => param !== undefined);
+};
+
+const validation = () => {
+    let accept = true;
+
+    if (questionSelected === '') {
+        showMessage('Please choose a question');
+        accept = false;
+        return accept;
+    }
+    closeMessage();
+
+
+    getAvailableParams(questionSelected).forEach((paramCount) => {
+        const div = document.getElementsByName(`Param${paramCount}`)[0];
+        if (div.value === '') {
+            div.classList.add('reject');
+            accept = false;
+        } else {
+            div.classList.remove('reject');
+        }
+    });
+    return accept;
+};
+
+
+const clearTestCases = () => {
+    const deletingList = document.getElementsByClassName('loaded-test-case');
+    for (let j = deletingList.length - 1; j >= 0; j -= 1) {
+        document.getElementById('test-case-section').removeChild(deletingList[j]);
+    }
+};
+const getTestCases = () => {
+    clearTestCases();
+    closeMessage();
+    showLoading(document.getElementById('test-case-section'));
+    apiCall('getTestCases.php', `&QuestionID=${questionSelected}`).then(JSON.parse).then((result) => {
+        const divString = result['Test Cases'].map((tc) => {
+            let paramString = '';
+            for (let i = 1; i <= 4; i += 1) {
+                if (i !== 1 && tc[`Param${i}`] !== '') {
+                    paramString += ', ';
+                }
+
+                paramString += tc[`Param${i}`];
+            }
+            return `<div class="loaded-test-case">(${paramString}) => ${tc.Output}<br /></div>`;
+        }).reduce((acc, val) => acc + val, '');
+
+        clearTestCases();
+        document.getElementById('test-case-section').insertAdjacentHTML('beforeend', divString);
+        doneLoading();
+    })
+  .catch((err) => {
+      doneLoading();
+      showMessage('This problem has no test cases.');
+  });
+};
+
+
+const clearForm = () => {
+    const form = document.getElementsByTagName('form');
+    if (form[0][2] === undefined) {
+        return;
+    }
+    for (let i = 0; i < 5; i += 1) {
+        form[0][i].value = '';
+    }
+};
+
+
+const addParameter = (availableParams) => {
+    const paramElem = document.getElementById('parameter-section');
+    for (let paramCount = 1; paramCount <= 4; paramCount += 1) {
+        let insertDiv = null;
+        if (availableParams.includes(paramCount)) {
+            insertDiv = `<input type="text" name="Param${paramCount}" placeholder="Param${paramCount}" id="param${paramCount}"></input>`;
+        } else {
+            insertDiv = `<input type="text" class="disabled" name="Param${paramCount}" placeholder="Param${paramCount}" id="param${paramCount}" disabled></input>`;
+        }
+        paramElem.insertAdjacentHTML('beforeend', insertDiv);
+    }
+};
+
+const removeParameters = () => {
+    const form = document.getElementsByTagName('form')[0];
+    form.removeChild(document.getElementById('parameter-section'));
+    document.getElementById('question-header').insertAdjacentHTML('afterend', '<div id="parameter-section"></div>');
+};
+
+const makeReturnOptions = () => {
+    let divString = '';
+    returnTypes.forEach((type) => {
+        divString += `<option value=${type}>${type}</option>`;
+    });
+    return divString;
+};
+
+const addQuestionsToBank = () => {
+    const questionBank = document.getElementById(QUESTION_INSERT_DIV);
+    questionsLoaded.forEach((question) => {
+        const questionText = question.QuestionString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const id = question.id;
+        const newDiv = `<div class="question" id="${id}" data-q-id="${id}" onclick="chooseQuestion(this);">${questionText}</div>`;
+        questionBank.insertAdjacentHTML('beforeend', newDiv);
+    });
+    doneLoading();
+};
+
+const clearQuestionsBank = () => {
+    const deleteList = document.getElementById(QUESTION_INSERT_DIV).children;
+    for (let i = deleteList.length - 1; i >= 0; i -= 1) {
+        deleteList[i].parentNode.removeChild(deleteList[i]);
+    }
+};
+
+const chooseQuestion = (elem) => {
+    questionSelected = elem.dataset.qId;
+
+    changeHeader();
+    getTestCases();
+    clearForm();
+    removeParameters();
+    addParameter(getAvailableParams(elem.dataset.qId));
+};
+
+const onSelect = () => {
+    const difficulty = difficultySelected === 'All' ? '' : `${difficultySelected}`;
+    const type = typeSelected === 'Type' ? '' : `${typeSelected}`;
+    const postString = `Difficulty=${difficulty}&Type=${type}`;
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    apiCall('getQuestions.php', postString).then(JSON.parse).then((questions) => {
+        if (questions.Questions === null) {
+            if (difficultySelected === 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${typeSelected} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} ${typeSelected} questions.`);
+            } else {
+                showMessage('Sorry, there are no questions :(');
+            }
+            doneLoading();
+            return;
+        }
+        questionsLoaded = questions.Questions;
+        closeMessage();
+        clearQuestionsBank();
+        addQuestionsToBank();
+    });
+};
+
+const onDifficultySelect = (event) => {
+    difficultySelected = event.target.value;
+    onSelect();
+};
+
+const onTypeSelect = (event) => {
+    typeSelected = event.target.value;
+    onSelect();
+};
+
+
+const startup = (session) => {
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    ucid = session.UCID;
+    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
+        document.getElementById('bank-header').innerText = 'Choose a Question';
+        questionsLoaded = questions.Questions;
+
+        addQuestionsToBank();
+        makeTypeFilterOptions();
+        makeDifficultyFilterOptions();
+    });
+};
+
+const onSubmit = (e) => {
+    e.preventDefault();
+
+    const fields = ['Param1', 'Param2', 'Param3', 'Param4', 'Output'];
+
+    if (!validation()) {
+        return;
+    }
+    let paramString = '';
+    for (let i = 0; i < 4; i += 1) {
+        if (i !== 0 && document.getElementsByName(fields[i])[0].value !== '') {
+            paramString += ', ';
+        }
+
+        paramString += document.getElementsByName(fields[i])[0].value;
+    }
+
+    const testCaseDiv = `<div class="loaded-test-case">(${paramString}) => ${document.getElementsByName(fields[4])[0].value}<br /></div>`;
+
+    console.log(testCaseDiv);
+
+
+    let postString = fields.map(field => `${field}=${encodeURIComponent(document.getElementsByName(field)[0].value)}&`).reduce((acc, val) => acc + val, '&');
+    postString += `QuestionID=${questionSelected}`;
+    apiCall('addTestCase.php', postString).then(JSON.parse).then((res) => {
+        if (res.success) {
+            showMessage('The test case was created successfully');
+            document.getElementById('test-case-section').insertAdjacentHTML('beforeend', testCaseDiv);
+        } else {
+            showMessage('Sorry, something went wrong. Please try again later.');
+        }
+        window.scrollTo(0, 0);
+    });
+};
+
+./js/exam-info.js
+---
+accessAllowed('i', sessionStorage.Instructor);
+
+let examID = null;
+let examName = '';
+let examsLoaded = null;
+let takable = null;
+let gradesReleased = null;
+
+const QUESTIONS_VIEW_DIV = 'questions-view';
+const EXAM_NAME_DIV = 'exam-name';
+const SIDEBAR_DIV = 'sidebar';
+const CONTAINER_DIV = 'other-half';
+
+const startup = (session) => {
+    showLoading(document.getElementById(SIDEBAR_DIV));
+    apiCall('getExams.php', `&UCID=${session.UCID}`).then(JSON.parse).then((result) => {
+        console.log(result);
+        if ((result.Exams === undefined || result.Exams === null
+          || result.Exams.length === 0) && result.success) {
+            showMessage('You haven\'t made any exams yet :(');
+            doneLoading();
+
+            return;
+        }
+
+        examsLoaded = result.Exams;
+        const examsList = result.Exams.map(exam => `<div data-exam-id=${exam.id} onclick="linkClick(this)" class="sidebar-element">${exam.displayName}</div>`).reduce((acc, val) => acc + val, '');
+
+        document.getElementById(SIDEBAR_DIV).insertAdjacentHTML('beforeend', examsList);
+        doneLoading();
+    });
+};
+
+
+const getExamIndex = (id) => {
+    for (let i = examsLoaded.length - 1; i >= 0; i -= 1) {
+        if (examsLoaded[i].id === id) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+const clearExamView = () => {
+    if (!document.getElementById(QUESTIONS_VIEW_DIV)) return;
+    const parent = document.getElementById(QUESTIONS_VIEW_DIV).parentNode;
+    parent.removeChild(document.getElementById(QUESTIONS_VIEW_DIV));
+    parent.insertAdjacentHTML('beforeend', '<div id="questions-view"></div>');
+};
+
+const changeExam = () => {
+    showLoading();
+    document.getElementById(SIDEBAR_DIV).classList.add('sidebar-closed');
+    document.getElementById(CONTAINER_DIV).classList.add('full-width');
+
+    takable = examsLoaded[getExamIndex(examID)].releasedForTaking === '1';
+    gradesReleased = examsLoaded[getExamIndex(examID)].gradesReleased === '1';
+    apiCall('getExam.php', `&ExamID=${examID}`).then(JSON.parse).then((res) => {
+        clearExamView();
+        examName = examsLoaded[getExamIndex(examID)].displayName;
+
+        const divString = res.Questions.map(question => `<div class="question-block"><div class="question-header">Question ${question.id}</div><div class="question-text">${question.QuestionString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div><div class="question-property">Difficulty: ${question.Difficulty}</div><div class="question-property">Value: ${question.QuestionValue}</div><div class="question-property">Question Type: ${question.Type}</div></div>`).reduce((acc, val) => acc + val, '');
+
+        if (!document.getElementById('release-check')) {
+            document.getElementById('release-view').insertAdjacentHTML('beforeend', '<label>Allow students to take this exam</label><input id="release-check" type="checkbox" onchange="releaseForTaking()"></input>');
+        }
+        document.getElementById('release-check').checked = takable;
+
+
+        document.getElementById(EXAM_NAME_DIV).innerText = examName;
+
+        document.getElementById(QUESTIONS_VIEW_DIV).insertAdjacentHTML('beforeend', divString);
+        doneLoading();
+    });
+};
+
+const linkClick = (elem) => {
+    examID = elem.dataset.examId;
+    changeExam();
+};
+
+const releaseForTaking = () => {
+    closeMessage();
+    takable = !takable;
+    const postString = `&ExamID=${examID}&ReleasedForTaking=${takable ? '1' : '0'}&GradesReleased=${gradesReleased ? '1' : '0'}`;
+    apiCall('setExam.php', postString).then((res) => {
+        console.log('done');
+        showMessage(`Students ${takable ? 'can' : 'cannot'} take this exam now.`);
+    });
+};
+
+./js/grade-results.js
+---
+accessAllowed('i', sessionStorage.Instructor);
+
+let examID = null;
+let ucid = null;
+let examGrade = null;
+let maxGrade = null;
+let examName = '';
+let studentUCID = null;
+let currentExam = null;
+let examsLoaded = null;
+let takable = null;
+let gradesReleased = null;
+let testCaseChanges = [];
+let questionGradeChanges = [];
+
+const QUESTIONS_VIEW_DIV = 'questions-view';
+const EXAM_NAME_DIV = 'exam-name';
+const MAIN_GRADE_DIV = 'main-grade';
+const SIDEBAR_DIV = 'sidebar';
+const CONTAINER_DIV = 'other-half';
+const SAVE_BUTTON_DIV = 'save-button';
+
+const startup = (session) => {
+    ucid = session.UCID;
+    showLoading(document.getElementById(SIDEBAR_DIV));
+    apiCall('getExams.php', `&UCID=${session.UCID}`).then(JSON.parse).then((result) => {
+        if ((result.Exams === undefined || result.Exams === null
+          || result.Exams.length === 0) && result.success) {
+            showMessage('There are no grades yet :(');
+            doneLoading();
+
+            return;
+        }
+
+        examsLoaded = result.Exams;
+        const examsList = result.Exams.map(exam => `<div data-exam-id=${exam.id} onclick="linkClick(this)" class="sidebar-element">${exam.displayName}</div>`).reduce((acc, val) => acc + val, '');
+
+        document.getElementById(SIDEBAR_DIV).insertAdjacentHTML('beforeend', examsList);
+        doneLoading();
+    });
+};
+
+const getExamIndex = (id) => {
+    for (let i = examsLoaded.length - 1; i >= 0; i -= 1) {
+        if (examsLoaded[i].id === id) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+
+const getGradeIndex = (id) => {
+    for (let i = currentExam.length - 1; i >= 0; i -= 1) {
+        if (currentExam[i].UCID === id) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+const onChangeTestCaseGrade = (e) => {
+    if (e.target.value < parseFloat(e.target.min)) {
+        e.target.value = e.target.min;
+    } else if (e.target.value > parseFloat(e.target.max)) {
+        e.target.value = e.target.max;
+    }
+
+    let changeIndex = null;
+    testCaseChanges.filter((change, index) => {
+        if (change.ExamID === examID && change.QuestionID === e.target.dataset.questionId
+          && change.TestCaseID === e.target.dataset.testCaseId && change.UCID === studentUCID) {
+            changeIndex = index;
+            return true;
+        }
+        return false;
+    });
+
+    if (testCaseChanges.length === 0) {
+        testCaseChanges.push({
+            ExamID: examID,
+            QuestionID: e.target.dataset.questionId,
+            TestCaseID: e.target.dataset.testCaseId,
+            UCID: studentUCID,
+            OriginalGrade: e.target.dataset.originalGrade,
+            NewGrade: e.target.value,
+        });
+    } else if (changeIndex !== null) {
+        testCaseChanges[changeIndex].NewGrade = e.target.value;
+    } else {
+        testCaseChanges.push({
+            ExamID: examID,
+            QuestionID: e.target.dataset.questionId,
+            TestCaseID: e.target.dataset.testCaseId,
+            UCID: studentUCID,
+            OriginalGrade: e.target.dataset.originalGrade,
+            NewGrade: e.target.value,
+        });
+    }
+
+    document.getElementById(SAVE_BUTTON_DIV).classList.add('show-button');
+};
+
+const onChangePartialGrade = (e) => {
+    console.log(e);
+    if (e.target.value < parseFloat(e.target.min)) {
+        e.target.value = e.target.min;
+    } else if (e.target.value > parseFloat(e.target.max)) {
+        e.target.value = e.target.max;
+    }
+
+    let changeIndex = null;
+    questionGradeChanges.filter((change, index) => {
+        if (change.ExamID === examID && change.QuestionID === e.target.dataset.questionId
+          && change.ColumnName === e.target.dataset.columnName && change.UCID === studentUCID) {
+            changeIndex = index;
+            return true;
+        }
+        return false;
+    });
+
+    if (questionGradeChanges.length === 0) {
+        questionGradeChanges.push({
+            ExamID: examID,
+            QuestionID: e.target.dataset.questionId,
+            UCID: studentUCID,
+            ColumnName: e.target.dataset.columnName,
+            OriginalGrade: e.target.dataset.originalGrade,
+            NewGrade: e.target.value,
+        });
+    } else if (changeIndex !== null) {
+        questionGradeChanges[changeIndex].NewGrade = e.target.value;
+    } else {
+        questionGradeChanges.push({
+            ExamID: examID,
+            QuestionID: e.target.dataset.questionId,
+            ColumnName: e.target.dataset.columnName,
+            UCID: studentUCID,
+            OriginalGrade: e.target.dataset.originalGrade,
+            NewGrade: e.target.value,
+        });
+    }
+
+    document.getElementById(SAVE_BUTTON_DIV).classList.add('show-button');
+};
+
+
+const clearQuestionsView = () => {
+    // changing student in same exam
+    const deletingNode = document.getElementById(QUESTIONS_VIEW_DIV);
+    const parentNode = document.getElementById('exam-view');
+
+    if (deletingNode) {
+        parentNode.removeChild(deletingNode);
+    }
+    parentNode.insertAdjacentHTML('beforeend', '<div id="questions-view"></div>');
+};
+
+const makeQuestionDiv = (qu) => {
+    const testCases = qu.TestCases.map(testCase => `<tr>
+                <td>${testCase.Input}</td><td>${testCase.ExpectedOutput}</td><td>${testCase.Result}</td><td class="${testCase.Passed === '1' ? 'color-pass' : 'color-fail'}">${testCase.Passed === '1' ? 'Yes' : 'No'}</td><td><input type="number" value="${parseFloat(testCase.TestCaseGrade).toFixed(2).replace('.00', '')}" data-question-id="${qu.QuestionID}" data-test-case-id="${testCase.TestCaseID}" data-original-grade="${testCase.TestCaseGrade}" onchange="onChangeTestCaseGrade(event);" min="0" max="${testCase['Max Test Case Grade'].toFixed(2).replace('.00', '')}" step=".01"/>/${testCase['Max Test Case Grade'].toFixed(2).replace('.00', '')}</td>
+              </tr>`).reduce((acc, val) => acc + val, '');
+    const compileResultsSection = qu.compilationMessage !== '' ?
+  `<div class="show-result" onclick="showView('Q${qu.QuestionID}-Compile');">Compilation Results</div>
+  <div class="hidden compile-result" id="Q${qu.QuestionID}-Compile"></div>` : '';
+    const divString = `
+          <div class="question-block">
+            <div class="question-header">Question ${qu.NumberInExam} (${qu.Grade}/${qu['Max Value']} pts.)</div>
+            <div class="question-string" id="Q${qu.QuestionID}-String"></div>
+            <div class="show-result-header">${studentUCID}'s Answer</div>
+            <div class="question-user-input" id="Q${qu.QuestionID}-UserInput"></div>
+            ${compileResultsSection}
+            <div class="feedback">${qu.userFeedback !== '' ? `Feedback: ${qu.userFeedback}` : ''}</div>
+            <div id="Q${qu.QuestionID}TestCases">
+                    <table>
+                      <tr>
+                        <td class="left-align">Correct Method Name</td><td></td><td></td><td class="${qu.correctMethodName === '1' ? 'color-pass' : 'color-fail'}">${qu.correctMethodName === '1' ? 'Yes' : 'No'}</td><td><input type="number" class="test-case-input" value="${parseFloat(qu.methodGrade).toFixed(2).replace('.00', '')}" data-question-id="${qu.QuestionID}" data-original-grade="${qu.methodGrade}" data-column-name="methodGrade" onchange="onChangePartialGrade(event);" min="0" max="${qu['Max Method Name Grade'].toFixed(2).replace('.00', '')}" step=".01"/>/${qu['Max Method Name Grade']}</td>
+                      </tr>
+                      <tr>
+                        <td class="left-align">Compiled Correctly</td><td></td><td></td><td class="${qu.compiledCorrectly === '1' ? 'color-pass' : 'color-fail'}">${qu.compiledCorrectly === '1' ? 'Yes' : 'No'}</td><td><input type="number" class="test-case-input" value="${parseFloat(qu.compiledGrade).toFixed(2).replace('.00', '')}" data-question-id="${qu.QuestionID}" data-original-grade="${qu.compiledGrade}" data-column-name="compiledGrade" onchange="onChangePartialGrade(event);" min="0" max="${qu['Max Compiled Grade'].toFixed(2).replace('.00', '')}" step=".01"/>/${qu['Max Compiled Grade']}</td>
+                      </tr>
+                      <tr>
+                        <td class="left-align">Correct Structure</td><td></td><td></td><td class="${qu.correctStructure === '1' ? 'color-pass' : 'color-fail'}">${qu.correctStructure === '1' ? 'Yes' : 'No'}</td><td><input type="number" class="test-case-input" value="${parseFloat(qu.structGrade).toFixed(2).replace('.00', '')}" data-question-id="${qu.QuestionID}" data-original-grade="${qu.structGrade}" data-column-name="structGrade" onchange="onChangePartialGrade(event);" min="0" max="${qu['Max Struct Grade'].toFixed(2).replace('.00', '')}" step=".01"/>/${qu['Max Struct Grade']}</td>
+                      </tr>
+                    <tr class="table-header">
+                        <th>Input</th><th>Expected Output</th><th>Actual Output</th><th>Passed</th><th>Points</th>
+                    </tr>
+                    <tbody>
+                        ${testCases}
+                    </tbody>
+                    </table>
+            </div>
+          </div>`;
+    return divString;
+};
+
+const changeStudentGrades = () => {
+    clearQuestionsView();
+    examGrade = null;
+    maxGrade = null;
+    const gradesObj = currentExam[getGradeIndex(studentUCID)];
+    examGrade = gradesObj.Grade.toFixed(2).replace('.00', '');
+    maxGrade = gradesObj['Max Grade'];
+    document.getElementById(MAIN_GRADE_DIV).innerText = `${examGrade}/${maxGrade}`;
+    const questionsView = document.getElementById(QUESTIONS_VIEW_DIV);
+
+    gradesObj.Questions.sort((a, b) => a.NumberInExam > b.NumberInExam).forEach((qu) => {
+        const divString = makeQuestionDiv(qu);
+        questionsView.insertAdjacentHTML('beforeend', divString);
+
+        document.getElementById(`Q${qu.QuestionID}-String`).innerText = qu.QuestionString;
+        document.getElementById(`Q${qu.QuestionID}-UserInput`).innerText = qu.UserInput.replace(/(?:\t)/g, '      ');
+        if (qu.compilationMessage !== '') {
+            document.getElementById(`Q${qu.QuestionID}-Compile`).innerText = qu.compilationMessage;
+        }
+    });
+};
+
+const calculateNewGrade = () => {
+    let newTotalGrade = 0;
+    const newgradesObj = currentExam[getGradeIndex(studentUCID)];
+    newgradesObj.Questions = newgradesObj.Questions.map((qu) => {
+        const newQuestion = qu;
+        let totalTCGrade = 0;
+
+        newQuestion.TestCases = qu.TestCases.map((tc) => {
+            const newTC = tc;
+            const changes = testCaseChanges.filter(grade => grade.ExamID === examID
+              && grade.QuestionID === qu.QuestionID && grade.UCID === studentUCID
+              && grade.TestCaseID === tc.TestCaseID);
+            if (changes.length !== 0) {
+                const netTCGradeChange = (changes[0].NewGrade - changes[0].OriginalGrade);
+                newTC.TestCaseGrade = (parseFloat(tc.TestCaseGrade) + netTCGradeChange).toFixed(2).replace('.00', '');
+            }
+            totalTCGrade += parseFloat(newTC.TestCaseGrade);
+            return newTC;
+        });
+        newQuestion.TestCasesGrade = totalTCGrade.toFixed(2).replace('.00', '');
+        let newQuestionGrade = 0;
+        const categories = ['compiledGrade', 'methodGrade', 'structGrade'];
+        categories.forEach((col) => {
+            const changes = questionGradeChanges
+            .filter(grade => grade.ExamID === examID && grade.ColumnName === col
+               && grade.QuestionID === qu.QuestionID && grade.UCID === studentUCID);
+            if (changes.length !== 0) {
+                newQuestion[col] = (parseFloat(qu[col]) +
+                 (changes[0].NewGrade - changes[0].OriginalGrade)).toFixed(2).replace('.00', '');
+            }
+            newQuestionGrade += parseFloat(newQuestion[col]);
+        });
+        newQuestionGrade += parseFloat(newQuestion.TestCasesGrade);
+        newQuestion.Grade = newQuestionGrade.toFixed(2).replace('.00', '');
+        newTotalGrade += parseFloat(newQuestion.Grade);
+        return newQuestion;
+    });
+    newgradesObj.Grade = newTotalGrade;
+    currentExam[getGradeIndex(studentUCID)] = newgradesObj;
+
+    document.getElementById(MAIN_GRADE_DIV).innerText = `${newgradesObj.Grade.toFixed(2).replace('.00', '')}/${maxGrade}`;
+    changeStudentGrades();
+};
+
+const onStudentSelect = (e) => {
+    studentUCID = e.target.value;
+    testCaseChanges = [];
+    questionGradeChanges = [];
+    document.getElementById(SAVE_BUTTON_DIV).classList.remove('show-button');
+
+    changeStudentGrades();
+};
+
+const clearExamView = () => {
+    // changing exam
+    const parentNode = document.getElementById('exam-container').parentNode;
+    parentNode.removeChild(document.getElementById('exam-container'));
+    parentNode.insertAdjacentHTML('beforeend', `<div id="exam-container">
+        <h1 id="exam-name"></h1>
+        <div id="release-view"></div>
+        <div id="exam-view">
+            <div class="center"><select id="select-student" onchange="onStudentSelect(event)"></select><div id="save-button" onclick="onSave();">Save Changes</div></div>
+            <div id="main-grade"></div>
+            <div id="questions-view"></div>
+        </div>
+    </div>`);
+};
+
+const chooseExam = () => {
+    trackedChanges = [];
+    showLoading();
+    document.getElementById(SIDEBAR_DIV).classList.add('sidebar-closed');
+    document.getElementById(CONTAINER_DIV).classList.add('full-width');
+    apiCall('getExamGrades.php', `&UCID=${ucid}&ExamID=${examID}`).then(JSON.parse).then((gradesObj) => {
+        if (!gradesObj.success) {
+            throw 'Error';
+        }
+        console.log(gradesObj);
+        clearExamView();
+        currentExam = gradesObj.StudentGrades;
+
+        examName = examsLoaded[getExamIndex(examID)].displayName;
+        takable = examsLoaded[getExamIndex(examID)].releasedForTaking === '1';
+        gradesReleased = examsLoaded[getExamIndex(examID)].gradesReleased === '1';
+
+
+        document.getElementById(EXAM_NAME_DIV).innerText = examName;
+
+        const studentsList = currentExam.map(grade => `<option value="${grade.UCID}">${grade.UCID}</option>`).reduce((acc, val) => acc + val, '<option>Select a Student</option>');
+
+        document.getElementById('select-student').insertAdjacentHTML('beforeend', studentsList);
+        if (!document.getElementById('release-check')) {
+            document.getElementById('release-view').insertAdjacentHTML('beforeend', '<label>Allow students to view their grades</label><input id="release-check" type="checkbox" onchange="releaseGrades()"></input>');
+        }
+        document.getElementById('release-check').checked = gradesReleased;
+        doneLoading();
+    })
+        .catch((err) => {
+            doneLoading();
+            console.error(err);
+            showMessage('Uh Oh! Something went wrong. Please try again later. ');
+        });
+};
+
+const releaseGrades = () => {
+    closeMessage();
+    gradesReleased = !gradesReleased;
+    const postString = `&ExamID=${examID}&ReleasedForTaking=${takable ? '1' : '0'}&GradesReleased=${gradesReleased ? '1' : '0'}`;
+    apiCall('setExam.php', postString).then(JSON.parse).then((res) => {
+        console.log(res);
+        if (res.status) {
+            showMessage(`Students ${gradesReleased ? 'can' : 'can\'t'} see their grades now.`);
+        } else {
+            showMessage('Sorry, something went wrong. Try again later');
+        }
+    });
+};
+
+const linkClick = (elem) => {
+    examID = elem.dataset.examId;
+    chooseExam();
+};
+
+
+const showView = (id) => {
+    document.getElementById(id).classList.toggle('show');
+};
+
+const onSave = () => {
+    if (questionGradeChanges.length === 0 && testCaseChanges.length === 0) {
+        closeMessage();
+        doneLoading();
+        console.log('no changes');
+        return;
+    }
+    closeMessage();
+    showLoading();
+    const sendingQuestionGradeChanges = questionGradeChanges.map((changedGrade) => {
+        const postString = `&Column=${changedGrade.ColumnName}&ExamID=${changedGrade.ExamID}&UCID=${changedGrade.UCID}&QuestionID=${changedGrade.QuestionID}&NewGrade=${encodeURI(changedGrade.NewGrade)}`;
+        return apiCall('updateGrade.php', postString);
+    });
+
+    const sendingTestCaseChanges = testCaseChanges.map((tc) => {
+        const postString = `&Table=TestCasesGrades490&ExamID=${tc.ExamID}&UCID=${tc.UCID}&QuestionID=${tc.QuestionID}&TestCaseID=${tc.TestCaseID}&NewGrade=${encodeURI(tc.NewGrade)}`;
+        return apiCall('updateGrade.php', postString);
+    });
+
+    Promise.all(sendingTestCaseChanges.concat(sendingQuestionGradeChanges)).then((res) => {
+        const parsedResults = res.map(JSON.parse);
+        const errorsFound = [];
+        parsedResults.forEach((individualResult, index) => {
+            if (!individualResult.status || !individualResult.success) {
+                errorsFound.push(index);
+            }
+        });
+        if (errorsFound.length === 0) {
+            showMessage('Your changes were submitted successfully');
+            calculateNewGrade();
+            questionGradeChanges = [];
+            testCaseChanges = [];
+            doneLoading();
+        } else {
+            showMessage('There was a problem submitting some of your changes. Please try again later.');
+            doneLoading();
+        }
+
+
+        document.getElementById(SAVE_BUTTON_DIV).classList.remove('show-button');
+    })
+    .catch((err) => {
+        console.error(err);
+        doneLoading();
+        showMessage('Uh Oh! There was a problem submitting your changes. Please try again later. ');
+    });
+};
+
+./js/landing-page.js
+---
+let instructor = null;
+
+const startup = function (session) {
+    instructor = session.Instructor;
+
+    document.getElementById('greeting').innerText = `Welcome ${session.UCID}`;
+};
+
+./js/login.js
+---
+if (!(sessionStorage.length === 0 || sessionStorage.UCID === 'null' || sessionStorage.UCID === null || sessionStorage.UCID === 'undefined')) {
+    window.location.href = 'html/landing-page.html';
+}
+function checkInputs() {
+    const ucidErr = document.getElementById('ID-error');
+    const passErr = document.getElementById('Password-error');
+    let validInput = true;
+
+    const idString = document.forms['login-form'].ID.value;
+    const passString = document.forms['login-form'].Password.value;
+
+    if (idString === '' || idString === null) {
+        ucidErr.innerText = 'UCID cannot be blank';
+        document.getElementById('ID').classList.add('err-input');
+        validInput = false;
+    }
+
+    if (passString === '' || passString === null) {
+        passErr.innerText = 'Password cannot be blank';
+        document.getElementById('Password').classList.add('err-input');
+        validInput = false;
+    }
+    return validInput;
+}
+
+const showMessage = (message) => {
+    document.getElementById('message-view').innerText = message;
+    document.getElementById('message-view').classList.remove('closed');
+};
+const closeMessage = () => {
+    document.getElementById('message-view').classList.add('closed');
+};
+
+function onTextChange(event) {
+    const targetId = `${event.target.id}-error`;
+    document.getElementById(event.target.id).classList.remove('err-input');
+    document.getElementById(targetId).innerText = '';
+}
+
+
+function changePage(results) {
+    if (results.BackendSuccess === true) {
+        window.location.href = 'html/landing-page.html';
+    } else {
+        showMessage('Sorry, your username and password were not recognized. Please try again.');
+    }
+}
+
+function onSubmit(event) {
+    event.preventDefault();
+    if (!checkInputs()) {
+        return;
+    }
+    closeMessage();
+    const url = 'http://afsaccess1.njit.edu/~ajr42/490Project/php/login.php';
+    const postString = `ID=${document.getElementById('ID').value}&Password=${document.getElementById('Password').value}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhr.send(postString);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                const resp = xhr.responseText;
+                const respJson = JSON.parse(resp);
+                sessionStorage.UCID = respJson.ucid;
+                sessionStorage.Instructor = respJson.type;
+                changePage(respJson);
+            }
+        }
+    };
+}
+
+const showSection = () => {
+    document.getElementById('about-section').classList.add('reveal');
+};
+
+const hideSection = () => {
+    document.getElementById('about-section').classList.remove('reveal');
+};
+
+./js/select-questions.js
+---
+accessAllowed('i', sessionStorage.Instructor);
+
+let questionsLoaded = null;
+let questionsInBank = [];
+let difficultySelected = 'All';
+let typeSelected = 'Type';
+const questionsSelected = [];
+const examSelected = 1;
+let maxGrade = 0;
+let ucid = null;
+const difficultyOptions = [{ val: 'All', label: 'Difficulty' }, { val: '1', label: 'Easy' }, { val: '2', label: 'Medium' }, { val: '3', label: 'Hard' }];
+const typeOptions = ['Type', 'None', 'For', 'While', 'Recursion', 'Overload'];
+
+
+const QUESTION_BANK_DIV = 'question-bank-view';
+const QUESTION_POOL_DIV = 'questions-selected-view';
+
+const getQuestionIndex = (id) => {
+    for (let i = questionsLoaded.length - 1; i >= 0; i -= 1) {
+        if (questionsLoaded[i].id === id) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+const clearQuestionsBank = () => {
+    const questionBank = document.getElementById(QUESTION_BANK_DIV);
+    const deleteList = document.getElementsByClassName('question-in-bank');
+    for (let i = deleteList.length - 1; i >= 0; i -= 1) {
+        questionBank.removeChild(deleteList[i]);
+    }
+};
+
+const updateMaxGrade = () => {
+    let newCount = 0;
+    questionsSelected.forEach((qId) => {
+        const div = document.getElementById(qId);
+        newCount += parseInt(div.childNodes[1].value, 10);
+    });
+    maxGrade = newCount;
+    document.getElementById('max-grade').innerText = `Maximum Grade: ${maxGrade}`;
+};
+
+const addToPool = (id) => {
+    if (questionsSelected.includes(id) || getQuestionIndex(id) === -1) {
+        return;
+    }
+    const questionPool = document.getElementById(QUESTION_POOL_DIV);
+    questionsSelected.push(id);
+    const questionText = questionsLoaded[getQuestionIndex(id)].QuestionString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const newDiv = `<div class="wrapper" id="${id}"><div class="question-in-pool"  data-q-id="${id}" onclick="questionPoolClick(this);">${questionText}</div><input class="small-input" type="number" placeholder="value"  min="1" onchange="gradeValChange(event)"></input></div>`;
+    questionPool.insertAdjacentHTML('beforeend', newDiv);
+    document.getElementById(`${id}`).childNodes[1].defaultValue = '1';
+    updateMaxGrade();
+};
+
+const questionBankClick = (elem) => {
+    const removeIndex = questionsInBank.indexOf(elem.dataset.qId);
+    questionsInBank.splice(removeIndex, 1);
+    document.getElementById(elem.dataset.qId).parentNode
+    .removeChild(document.getElementById(elem.dataset.qId));
+
+    addToPool(elem.dataset.qId);
+};
+
+const gradeValChange = (e) => {
+    updateMaxGrade();
+    removeValidation(e);
+};
+
+
+const addToBank = function (id) {
+    if (questionsInBank.includes(id) || getQuestionIndex(id) === -1) {
+        return;
+    }
+    const questionBank = document.getElementById(QUESTION_BANK_DIV);
+    questionsInBank.push(id);
+    const questionText = questionsLoaded[getQuestionIndex(id)].QuestionString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const newDiv = `<div class="question question-in-bank" id="${id}" data-q-id="${id}" onclick="questionBankClick(this);">${questionText}</div>`;
+    questionBank.insertAdjacentHTML('beforeend', newDiv);
+};
+
+const addQuestionsToBank = function () {
+    clearQuestionsBank();
+    const questionBank = document.getElementById(QUESTION_BANK_DIV);
+
+    questionsInBank.forEach((id) => {
+        if (questionsSelected.includes(id)) {
+            return;
+        }
+        const questionText = questionsLoaded[getQuestionIndex(id)].QuestionString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const newDiv = `<div class="question question-in-bank" id="${id}" data-q-id="${id}" onclick="questionBankClick(this);">${questionText}</div>`;
+        questionBank.insertAdjacentHTML('beforeend', newDiv);
+    });
+
+    doneLoading();
+};
+
+const questionPoolClick = (elem) => {
+    const removeIndex = questionsSelected.indexOf(elem.dataset.qId);
+    questionsSelected.splice(removeIndex, 1);
+    document.getElementById(elem.dataset.qId).parentNode
+    .removeChild(document.getElementById(elem.dataset.qId));
+
+    addToBank(elem.dataset.qId);
+};
+
+const onSelect = () => {
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    const difficulty = difficultySelected === 'All' ? '' : `${difficultySelected}`;
+    const type = typeSelected === 'Type' ? '' : `${typeSelected}`;
+    const postString = `Difficulty=${difficulty}&Type=${type}`;
+    apiCall('getQuestions.php', postString).then(JSON.parse).then((questions) => {
+        if (questions.Questions === null) {
+            if (difficultySelected === 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${typeSelected} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10)].label} questions.`);
+            } else {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10)].label} ${typeSelected} questions.`);
+            }
+            doneLoading();
+            return;
+        }
+        closeMessage();
+        questionsLoaded = questions.Questions;
+        questionsInBank = questionsLoaded.map(q => q.id);
+
+        addQuestionsToBank();
+    });
+};
+
+const onDifficultySelect = (event) => {
+    difficultySelected = event.target.value;
+    onSelect();
+};
+
+const onTypeSelect = (event) => {
+    typeSelected = event.target.value;
+    onSelect();
+};
+
+const validation = () => {
+    let accepted = true;
+    if (questionsSelected.length === 0) {
+        accepted = false;
+    }
+
+    const examName = document.getElementById('exam-name');
+
+    if (examName.value === '') {
+        examName.classList.add('reject');
+        accepted = false;
+    }
+
+    questionsSelected.forEach((qId) => {
+        const div = document.getElementById(qId);
+        if (div.childNodes[1].value === '') {
+            div.childNodes[1].classList.add('reject');
+            accepted = false;
+        }
+    });
+
+    return accepted;
+};
+
+const onSubmit = () => {
+    if (!validation()) {
+        return;
+    }
+    let url = 'createExam.php';
+    const postString = `&UCID=instructor&ExamName=${document.getElementById('exam-name').value}&MaxGrade=${maxGrade}`;
+
+    apiCall(url, postString).then(JSON.parse).then((examResult) => {
+        url = 'addToExam.php';
+        const sendQuestions = questionsSelected.map((qid, index) => {
+            const qVal = document.getElementById(qid).childNodes[1].value;
+            return apiCall(url, `&ExamID=${examResult.ExamID}&QuestionID=${qid}&QuestionValue=${qVal}&NumberInExam=${index + 1}`);
+        });
+        Promise.all(sendQuestions).then((res) => {
+            let numberOfSuccess = 0;
+            res.forEach((individualQuestion) => {
+                const parsedIndividualQuestion = JSON.parse(individualQuestion);
+                if (parsedIndividualQuestion.success) {
+                    numberOfSuccess += 1;
+                }
+            });
+
+            if (numberOfSuccess === res.length) {
+                showMessage('The exam was created successfully');
+            } else {
+                showMessage('Sorry, something went wrong. Please try again later.');
+            }
+            window.scrollTo(0, 0);
+        });
+    });
+};
+
+
+const startup = (session) => {
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    ucid = session.UCID;
+    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
+        questionsLoaded = questions.Questions;
+        questionsInBank = questionsLoaded.map(q => q.id);
+
+        addQuestionsToBank();
+        makeDifficultyFilterOptions();
+        makeTypeFilterOptions();
+    });
+};
+
+./js/shared.js
+---
+let session = {};
+
+const apiCall = (endpoint, postString) => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let appendedPostString = postString;
+    const url = 'http://afsaccess1.njit.edu/~ajr42/490Project/php/apiCall.php';
+
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    if (postString === undefined) {
+        appendedPostString = `&Dir=${endpoint}`;
+    } else {
+        appendedPostString += `&Dir=${endpoint}`;
+    }
+    xhr.send(appendedPostString);
+    xhr.onreadystatechange = function change() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                const resp = xhr.responseText;
+                resolve(resp);
+            } else {
+                reject(xhr.status);
+            }
+        }
+    };
+});
+
+const accessAllowed = (whoIsAllowed, sessionVar) => {
+    if (whoIsAllowed === 'i') {
+        if (!session.Instructor) {
+            window.location.replace('../html/landing-page.html');
+            return false;
+        }
+    } else if (session.Instructor) {
+        window.location.replace('../html/landing-page.html');
+        return false;
+    }
+    return true;
+};
+
+const localCall = (url, postString) => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    if (postString === undefined) {
+        xhr.send();
+    } else {
+        xhr.send(postString);
+    }
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                const resp = xhr.responseText;
+                resolve(JSON.parse(resp));
+            } else {
+                reject(xhr.status);
+            }
+        }
+    };
+});
+
+
+const sessionFetch = () => new Promise((resolve, reject) => {
+    if (sessionStorage.length === 0 || sessionStorage.UCID === 'null' || sessionStorage.UCID === null || sessionStorage.UCID === 'undefined') {
+        reject(sessionStorage);
+    } else {
+        const sessionCompatability = {
+            UCID: sessionStorage.UCID,
+            Instructor: sessionStorage.Instructor === 'i',
+        };
+        resolve(sessionCompatability);
+    }
+});
+
+const goHome = function () {
+    location.href = 'landing-page.html';
+};
+
+
+const removeValidation = (e) => {
+    if (e.target.classList.contains('reject')) {
+        e.target.classList.remove('reject');
+    }
+};
+
+const logout = () => {
+    sessionStorage.UCID = null;
+    sessionStorage.Instructor = null;
+    apiCall('../php/logout.php').then(() => {
+        window.location.href = '../login.html';
+    });
+};
+
+const showLoading = (target) => {
+    const loadingDiv = `<div id="loading-screen">
+        <div id="loading-icon">
+            <svg width='100px' height='100px' xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" class="uil-ring-alt"><rect x="0" y="0" width="100" height="100" fill="none" class="bk"></rect><circle cx="50" cy="50" r="40" stroke="#afafb7" fill="none" stroke-width="10" stroke-linecap="round"></circle><circle cx="50" cy="50" r="40" stroke="#5cffd6" fill="none" stroke-width="6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" dur="2s" repeatCount="indefinite" from="0" to="502"></animate><animate attributeName="stroke-dasharray" dur="2s" repeatCount="indefinite" values="150.6 100.4;1 250;150.6 100.4"></animate></circle></svg>
+    </div>`;
+    let attachingNode = document.body;
+    if (target !== undefined) {
+        attachingNode = target;
+    }
+
+    if (document.getElementById('loading-screen')) {
+        return;
+    }
+
+    attachingNode.insertAdjacentHTML('afterbegin', loadingDiv);
+    setTimeout(() => {
+        document.getElementById('loading-screen').classList.add('finish-load');
+    }, 3);
+};
+
+const doneLoading = () => {
+    if (!document.getElementById('loading-screen')) {
+        return;
+    }
+
+    const removingNode = document.getElementById('loading-screen').parentNode;
+
+    document.getElementById('loading-screen').classList.remove('finish-load');
+    setTimeout(() => {
+        removingNode.removeChild(document.getElementById('loading-screen'));
+    }, 510);
+};
+
+
+const addInstructorView = () => {
+    const sidebar = document.getElementById('logo');
+    const divVar = '<div id="instructor-view"><a href="add-question.html">Add a Question</a><a href="add-test-case.html">Add Test Cases</a><a href="select-questions.html">Make an Exam</a><a href="exam-info.html">Exam Info</a><a href="grade-results.html">Grading Results</a></div>';
+    sidebar.insertAdjacentHTML('afterend', divVar);
+};
+
+const addStudentView = () => {
+    const sidebar = document.getElementById('logo');
+    const divVar = '<div id="student-view"><a class ="sidebar-element" href="take-exam.html">Take an Exam</a><a href="view-grades.html">View Grades</a></div>';
+    sidebar.insertAdjacentHTML('afterend', divVar);
+};
+
+const closeMessage = () => {
+    document.getElementById('message-view').classList.add('closed');
+};
+
+const showMessage = (message, url) => {
+    if (url !== undefined) {
+        document.getElementById('message-view').onclick = (route) => {
+            window.location.href = route;
+        };
+    }
+    document.getElementById('message-view').innerHTML = message;
+    document.getElementById('message-view').classList.remove('closed');
+    setTimeout(closeMessage, 10000);
+};
+
+
+const makeDifficultyFilterOptions = () => {
+    const difficultyDropdown = document.getElementById('select-difficulty');
+    let divString = '';
+    [{ val: 'All', label: 'Difficulty' },
+     { val: 1, label: 'Easy' },
+      { val: 2, label: 'Medium' },
+      { val: 3, label: 'Hard' },
+    ].forEach((type) => {
+        divString += `<option value=${type.val}>${type.label}</option>`;
+    });
+    difficultyDropdown.insertAdjacentHTML('beforeend', divString);
+};
+
+const makeTypeFilterOptions = () => {
+    const typeDropdown = document.getElementById('select-type');
+    let divString = '';
+    ['Type', 'None', 'For', 'While', 'Recursion', 'Overload'].forEach((type) => {
+        divString += `<option value=${type}>${type}</option>`;
+    });
+    typeDropdown.insertAdjacentHTML('beforeend', divString);
+};
+
+
+// ///////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////
+// ///////////////////////////////////
+
+sessionFetch().then((res) => {
+    session = res;
+}).catch((res) => {
+    window.location.replace('../login.html');
+});
+
+window.onload = () => {
+    if (session.Instructor) {
+        addInstructorView();
+    } else {
+        addStudentView();
+    }
+
+
+    startup(session);
+};
+
+./js/take-exam.js
+---
+accessAllowed('s', sessionStorage.Instructor);
+
+let questionsLoaded = null;
+let currentQuestion = 0;
+let questionCount = null;
+let examID = null;
+let examStarted = false;
+let examName = null;
+let ucid = null;
+
+// used for modal view
+let tempExamID = null;
+let tempExamName = null;
+
+const SIDEBAR_DIV = 'sidebar';
+const CONTAINER_DIV = 'other-half';
+
+const startup = (session) => {
+    showLoading(document.getElementById(SIDEBAR_DIV));
+    ucid = session.UCID;
+    apiCall('getExams.php', `&UCID=${session.UCID}`).then(JSON.parse).then((result) => {
+        if ((result.Exams === undefined || result.Exams === null
+          || result.Exams.length === 0) && result.success) {
+            showMessage('There are no exams yet :(');
+            doneLoading();
+
+            return;
+        }
+
+        examsLoaded = result.Exams;
+        const examsList = result.Exams.map(exam => `<div data-exam-id=${exam.id} data-exam-name=${exam.displayName} onclick="linkClick(this)" class="sidebar-element">${exam.displayName}</div>`).reduce((acc, val) => acc + val, '');
+
+        document.getElementById(SIDEBAR_DIV).insertAdjacentHTML('beforeend', examsList);
+        doneLoading();
+    });
+};
+
+const clearQuestionView = () => {
+    const parentNode = document.getElementById(CONTAINER_DIV).parentNode;
+    parentNode.removeChild(document.getElementById(CONTAINER_DIV));
+    parentNode.insertAdjacentHTML('beforeend', '<div id="other-half"></div>');
+};
+
+
+const changeButtons = () => {
+    document.getElementById(CONTAINER_DIV).removeChild(document.getElementById('button-section'));
+    if (questionsLoaded.length === 1) {
+        document.getElementById(CONTAINER_DIV).insertAdjacentHTML('beforeend', '<div id="button-section"><button id ="next" onclick="onSubmit()">Submit</button><button id ="previous" onclick="previousClick()">Previous</button></div>');
+    } else {
+        document.getElementById(CONTAINER_DIV).insertAdjacentHTML('beforeend', '<div id="button-section"><button id ="next" onclick="nextClick()">Next</button><button id ="previous" onclick="previousClick()">Previous</button></div>');
+    }
+};
+
+const changeQuestionHeader = (question) => {
+    document.getElementById('question-header').innerText = `Question ${currentQuestion + 1} of ${questionCount} (${question.value} ${question.value === '1' ? 'pt.' : 'pts.'})`;
+};
+
+const countTabs = (substr) => {
+    let count = 0;
+
+    let startScanning = false;
+    let i = substr.length - 1;
+    while (i > 0) {
+        if (substr.charAt(i) === '\t') {
+            startScanning = true;
+            count += 1;
+        } else if (substr.charAt(i) === '\n') {
+            break;
+        } else if (startScanning) {
+            break;
+        }
+        i -= 1;
+    }
+
+    return count;
+};
+
+const repeatTab = (count) => {
+    let returnStr = '';
+    for (let j = 0; j < count; j += 1) {
+        returnStr += '\t';
+    }
+    return returnStr;
+};
+
+
+const addTab = (e) => {
+    const s = e.target.selectionStart;
+
+    if (e.keyCode === 9) {
+        e.preventDefault();
+        e.target.value = `${e.target.value.substring(0, s)}\t${e.target.value.substring(e.target.selectionEnd)}`;
+        e.target.selectionEnd = s + 1;
+    } else if (e.keyCode === 13) {
+        e.preventDefault();
+
+        const addingThisManyTabs = countTabs(e.target.value.substring(0, s));
+        if (e.target.value.charAt(s - 1) === '{') {
+            e.target.value = `${e.target.value.substring(0, s)}\n${repeatTab(addingThisManyTabs + 1)}\n${repeatTab(addingThisManyTabs)}${e.target.value.substring(s)}`;
+            e.target.selectionEnd = s + countTabs(e.target.value.substring(0, s)) + 2;
+        } else {
+            e.target.value = `${e.target.value.substring(0, s)}\n${repeatTab(addingThisManyTabs)}${e.target.value.substring(e.target.selectionEnd)}`;
+            e.target.selectionEnd = s + countTabs(e.target.value.substring(0, s)) + 1;
+        }
+    }
+};
+
+const addClosing = (e) => {
+    let s = null;
+    if (e.keyCode === 40) {
+        e.preventDefault();
+        s = e.target.selectionStart;
+        e.target.value = `${e.target.value.substring(0, s)}()${e.target.value.substring(e.target.selectionEnd)}`;
+        e.target.selectionEnd = s + 1;
+    } else if (e.keyCode === 123) {
+        e.preventDefault();
+        s = e.target.selectionStart;
+        e.target.value = `${e.target.value.substring(0, s)}{}${e.target.value.substring(e.target.selectionEnd)}`;
+        e.target.selectionEnd = s + 1;
+    } else if (e.keyCode === 91) {
+        e.preventDefault();
+        s = e.target.selectionStart;
+        e.target.value = `${e.target.value.substring(0, s)}[]${e.target.value.substring(e.target.selectionEnd)}`;
+        e.target.selectionEnd = s + 1;
+    } else if (e.keyCode === 34) {
+        e.preventDefault();
+        s = e.target.selectionStart;
+        if (e.target.selectionStart !== e.target.selectionEnd) {
+            e.target.value = `${e.target.value.substring(0, e.target.selectionStart - 1)}"${e.target.value.substring(e.target.selectionStart, e.target.selectionEnd)}"${e.target.value.substring(e.target.selectionEnd + 1)}`;
+        } else {
+            e.target.value = `${e.target.value.substring(0, s)}""${e.target.value.substring(e.target.selectionEnd)}`;
+            e.target.selectionEnd = s + 1;
+        }
+    } else if (e.keyCode === 39) {
+        e.preventDefault();
+        s = e.target.selectionStart;
+        if (e.target.selectionStart !== e.target.selectionEnd) {
+            e.target.value = `${e.target.value.substring(0, e.target.selectionStart - 1)}'${e.target.value.substring(e.target.selectionStart, e.target.selectionEnd)}'${e.target.value.substring(e.target.selectionEnd + 1)}`;
+        } else {
+            e.target.value = `${e.target.value.substring(0, e.target.selectionStart)}''${e.target.value.substring(e.target.selectionEnd)}`;
+            e.target.selectionEnd = s + 1;
+        }
+    }
+};
+const onTextChange = (e) => {
+    questionsLoaded[currentQuestion].answer = e.target.value;
+};
+
+const changeQuestionView = () => {
+    const questionText = document.getElementById('question-text');
+    const answerText = document.getElementById('question-answer');
+
+    questionText.innerText = questionsLoaded[currentQuestion].text;
+    answerText.value = questionsLoaded[currentQuestion].answer;
+    changeQuestionHeader(questionsLoaded[currentQuestion]);
+};
+
+const validation = () => {
+    let accept = true;
+    const invalid = [];
+    questionsLoaded.forEach((qu, index) => {
+        if (qu.answer === '') {
+            qu.className = 'reject';
+            invalid.push(index + 1);
+            accept = false;
+        }
+    });
+
+    if (!accept) {
+        const errString = `You missed some questions: ${invalid.join()}`;
+        showMessage(errString);
+    }
+
+    return accept;
+};
+
+const onSubmit = () => {
+    if (!validation()) {
+        document.getElementById('next').classList.add('disabled');
+        return;
+    }
+    document.getElementById('next').classList.remove('disabled');
+
+
+    showLoading(document.getElementById('question-view'));
+    const submission = questionsLoaded.map((qu) => {
+        const postString = `&ExamID=${examID}&QuestionID=${qu.id}&UCID=${ucid}&UserTextBox=${encodeURIComponent(qu.answer)}`;
+        return apiCall('submitAnswer.php', postString);
+        console.log(postString);
+    });
+
+    Promise.all(submission).then((res) => {
+        doneLoading();
+        console.log(res);
+        parsedResults = res.map(JSON.parse);
+        let success = true;
+        parsedResults.forEach((individualResult) => {
+            if (!individualResult.success) {
+                success = false;
+            }
+        });
+
+        if (success) {
+            window.location.href = './grade-results.html';
+        } else {
+            showMessage('Oops, there was a problem submitting your answers. Try again later.');
+        }
+    });
+};
+
+const nextClick = () => {
+    if (currentQuestion === questionsLoaded.length - 2) {
+        currentQuestion += 1;
+        changeQuestionView();
+        document.getElementById('next').innerText = 'Submit';
+        document.getElementById('next').onclick = onSubmit;
+    }
+
+    if (currentQuestion < questionsLoaded.length - 2) {
+        currentQuestion += 1;
+        changeQuestionView();
+    }
+
+
+    if (currentQuestion === 1) {
+        document.getElementById('previous').classList.remove('disabled');
+    }
+};
+
+const previousClick = () => {
+    if (currentQuestion > 0) {
+        currentQuestion -= 1;
+        changeQuestionView();
+    }
+
+    if (currentQuestion === 0) {
+        document.getElementById('previous').classList.add('disabled');
+    }
+    if (currentQuestion === questionsLoaded.length - 2) {
+        document.getElementById('next').innerText = 'Next';
+        document.getElementById('next').onclick = nextClick;
+        document.getElementById('next').classList.remove('disabled');
+    }
+};
+
+const openModal = (message) => {
+    const modalDiv = `
+  <div id="modal">
+    <div id="modal-content">
+      <div id="modal-text">
+        <p>${message}</p>
+      </div>
+      <div id="modal-footer">
+        <div id="button-group">
+            <div id="cancel-button" onclick="modalChoice(false);">Cancel</div>
+            <div id="confirm-button" onclick="modalChoice(true);">Confirm</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+    document.getElementById('message-view').insertAdjacentHTML('afterend', modalDiv);
+};
+
+const closeModal = () => {
+    document.getElementById('modal').parentNode.removeChild(document.getElementById('modal'));
+};
+
+const chooseExam = () => {
+    clearQuestionView();
+    showLoading();
+    document.getElementById(SIDEBAR_DIV).classList.add('sidebar-closed');
+    document.getElementById(CONTAINER_DIV).classList.add('full-width');
+    apiCall('getExam.php', `&ExamID=${examID}`).then(JSON.parse).then((exam) => {
+        if (!exam.success) {
+            return;
+        }
+
+        if (exam.Questions === null && exam.success) {
+            return;
+        }
+        questionsLoaded = exam.Questions.map(question => ({
+            text: question.QuestionString,
+            id: question.id,
+            value: question.QuestionValue,
+            answer: '',
+            className: '',
+        }));
+        questionCount = questionsLoaded.length;
+        currentQuestion = 0;
+        // document.getElementById('exam-name').innerText = examName;
+
+
+        if (!document.getElementById('question-header')) {
+            const examView = `<div id="question-view">
+                            <h3 id="question-header"></h3>
+                            <div id="question-text"></div>
+                                <textarea id="question-answer" onkeydown="addTab(event)" onkeypress="addClosing(event)" onchange="onTextChange(event)"></textarea>
+                            </div>
+                            <div id="button-section">
+                              <button id ="next" onclick="nextClick()">Next</button>
+                              <button id ="previous" onclick="previousClick()">Previous</button>
+                            </div>`;
+            document.getElementById(CONTAINER_DIV).insertAdjacentHTML('beforeend', examView);
+        }
+        changeQuestionView();
+        changeButtons();
+        closeMessage();
+        doneLoading();
+    });
+};
+
+const modalChoice = (val) => {
+    if (val) {
+        examID = tempExamID;
+        examName = tempExamName;
+        chooseExam();
+    }
+    tempExamID = null;
+    tempExamName = null;
+    closeModal();
+};
+
+const linkClick = (elem) => {
+    if (examStarted) {
+        if (elem.dataset.examId === examID) {
+            // return;
+        }
+        tempExamID = elem.dataset.examId;
+        tempExamName = elem.dataset.examName;
+        openModal('If you switch exams, your answers will be lost. Are you sure you want to continue?');
+    } else {
+        examID = elem.dataset.examId;
+        examName = elem.dataset.examName;
+        chooseExam();
+        examStarted = true;
+    }
+};
+
+./js/view-grades.js
+---
+accessAllowed('s', sessionStorage.Instructor);
+
+let ucid = null;
+let examID = null;
+
+const QUESTIONS_VIEW_DIV = 'questions-view';
+const EXAM_NAME_DIV = 'exam-name';
+const MAIN_GRADE_DIV = 'main-grade';
+const SIDEBAR_DIV = 'sidebar';
+const CONTAINER_DIV = 'other-half';
+
+const startup = (session) => {
+    ucid = session.UCID;
+    showLoading(document.getElementById(SIDEBAR_DIV));
+    apiCall('getGradedExams.php', `&UCID=${session.UCID}`).then(JSON.parse).then((result) => {
+        if ((result['Graded Exams'] === undefined || result['Graded Exams'] === null || result['Graded Exams'].length === 0) && result.success) {
+            showMessage('There are no grades yet :(');
+            doneLoading();
+            return;
+        }
+
+        examsLoaded = result['Graded Exams'];
+        if (!result['Graded Exams']) {
+            showMessage('There are no grades :(');
+            return;
+        }
+        const examsList = result['Graded Exams'].map(exam => `<div data-exam-id=${exam.ExamID} onclick="linkClick(this)" class="sidebar-element">${exam.ExamName}</div>`).reduce((acc, val) => acc + val, '');
+
+        document.getElementById(SIDEBAR_DIV).insertAdjacentHTML('beforeend', examsList);
+        doneLoading();
+    });
+};
+
+const showView = (id) => {
+    document.getElementById(id).classList.toggle('show');
+};
+
+
+const getExamIndex = (id) => {
+    for (let i = examsLoaded.length - 1; i >= 0; i -= 1) {
+        if (examsLoaded[i].ExamID === id) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+const clearQuestionsView = () => {
+    document.getElementById(MAIN_GRADE_DIV).innerText = '';
+    const deletingNode = document.getElementById(QUESTIONS_VIEW_DIV);
+    if (deletingNode) {
+        const parentNode = document.getElementById('exam-view');
+        parentNode.removeChild(deletingNode);
+        parentNode.insertAdjacentHTML('beforeend', '<div id="questions-view"></div>');
+    }
+};
+
+const chooseExam = () => {
+    clearQuestionsView();
+
+    document.getElementById(SIDEBAR_DIV).classList.add('sidebar-closed');
+    document.getElementById(CONTAINER_DIV).classList.add('full-width');
+    const questionsView = document.getElementById(QUESTIONS_VIEW_DIV);
+    apiCall('getExamGrades.php', `&UCID=${ucid}&ExamID=${examID}`).then(JSON.parse).then((gradesObj) => {
+        console.log(gradesObj);
+        if (gradesObj.Questions === undefined && gradesObj.success) {
+            return;
+        }
+
+
+        gradesObj.Questions.sort((a, b) => a.NumberInExam > b.NumberInExam).forEach((qu) => {
+            const testCases = qu.TestCases.map(testCase => `<tr>
+                          <td>${testCase.Input}</td><td>${testCase.ExpectedOutput}</td><td>${testCase.Result}</td><td class="${testCase.Passed === '1' ? 'color-pass' : 'color-fail'}">${testCase.Passed === '1' ? 'Yes' : 'No'}</td><td>${parseFloat(testCase.TestCaseGrade).toFixed(2).replace('.00', '')}/${testCase['Max Test Case Grade'].toFixed(2).replace('.00', '')}</td>
+                        </tr>`).reduce((acc, val) => acc + val, '');
+            const compileResultsSection = qu.compilationMessage !== '' ?
+            `<div class="show-result" onclick="showView('Q${qu.QuestionID}-Compile');">Compilation Results</div>
+            <div class="hidden compile-result" id="Q${qu.QuestionID}-Compile"></div>` : '';
+
+            const divString = `
+            <div class="question-block">
+              <div class="question-header">Question ${qu.NumberInExam} (${qu.Grade}/${qu['Max Value']} pts.)</div>
+              <div class="question-string" id="Q${qu.QuestionID}-String"></div>
+              <div class="show-result-header">Your Answer</div>
+              <div class="question-user-input" id="Q${qu.QuestionID}-UserInput"></div>
+              ${compileResultsSection}
+              <div class="feedback">${qu.userFeedback !== '' ? `Feedback: ${qu.userFeedback}` : ''}</div>
+              <div id="Q${qu.QuestionID}TestCases">
+                      <table>
+                        <tr>
+                          <td class="left-align">Correct Method Name</td><td></td><td></td><td class="${qu.correctMethodName === '1' ? 'color-pass' : 'color-fail'}">${qu.correctMethodName === '1' ? 'Yes' : 'No'}</td><td>${parseFloat(qu.methodGrade).toFixed(2).replace('.00', '')}/${parseFloat(qu['Max Method Name Grade']).toFixed(2).replace('.00', '')}</td>
+                        </tr>
+                        <tr>
+                          <td class="left-align">Compiled Correctly</td><td></td><td></td><td class="${qu.compiledCorrectly === '1' ? 'color-pass' : 'color-fail'}">${qu.compiledCorrectly === '1' ? 'Yes' : 'No'}</td><td>${parseFloat(qu.compiledGrade).toFixed(2).replace('.00', '')}/${parseFloat(qu['Max Compiled Grade']).toFixed(2).replace('.00', '')}</td>
+                        </tr>
+                        <tr>
+                          <td class="left-align">Correct Structure</td><td></td><td></td><td class="${qu.correctStructure === '1' ? 'color-pass' : 'color-fail'}">${qu.correctStructure === '1' ? 'Yes' : 'No'}</td><td>${parseFloat(qu.structGrade).toFixed(2).replace('.00', '')}/${parseFloat(qu['Max Struct Grade']).toFixed(2).replace('.00', '')}</td>
+                        </tr>
+                      <tr class="table-header">
+                          <th>Input</th><th>Expected Output</th><th>Actual Output</th><th>Passed</th><th>Points</th>
+                      </tr>
+                      <tbody>
+                          ${testCases}
+                      </tbody>
+                      </table>
+              </div>
+            </div>`;
+            questionsView.insertAdjacentHTML('beforeend', divString);
+
+            document.getElementById(`Q${qu.QuestionID}-String`).innerText = qu.QuestionString;
+            document.getElementById(`Q${qu.QuestionID}-UserInput`).innerText = qu.UserInput.replace(/(?:\t)/g, '      ');
+            if (qu.compilationMessage !== '') {
+                document.getElementById(`Q${qu.QuestionID}-Compile`).innerText = qu.compilationMessage;
+            }
+        });
+        document.getElementById(MAIN_GRADE_DIV).innerText = `${gradesObj.Grade.toFixed(2).replace('.00', '')}/${gradesObj['Max Grade']}`;
+        doneLoading();
+    })
+        .catch((err) => {
+            doneLoading();
+            console.error(err);
+            showMessage('Uh Oh! Something went wrong. Please try again later. ');
+        });
+};
+
+const linkClick = (elem) => {
+    if (elem.dataset.examId === examID) {
+        return;
+    }
+    examID = elem.dataset.examId;
+    showLoading();
+    chooseExam();
+};
+

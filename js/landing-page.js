@@ -1,8 +1,7 @@
 let instructor = null;
 
-let startup = function(session){
-  instructor = session.Instructor;
+const startup = function (session) {
+    instructor = session.Instructor;
 
-  document.getElementById('greeting').innerText = `Welcome ${session.UCID}`;
-
-}
+    document.getElementById('greeting').innerText = `Welcome ${session.UCID}`;
+};

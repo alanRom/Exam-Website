@@ -61,7 +61,7 @@ label{
   color:white;
 }
 
-.question{
+.question-block{
   height: fit-content;
   border:none;
   border-bottom: 1px dashed #C9CBCF;
@@ -78,8 +78,9 @@ label{
     font-family: monospace;
     line-height: 1.5;
     margin: 10px 0;
-    padding: 10px 30px;
+    padding: 10px 20px;
     text-align: left;
+    width: calc(100% - 60px);
 }
 .question-header {
     font-size: 24px;
@@ -96,24 +97,24 @@ label{
 .compile-result{
   background-color: rgba(255,255,255,0.2);
   border-radius: 2px;
+  width: calc(100% - 60px);
   margin: 10px 0;
   overflow: auto;
-  transition: height 0.5s ease-in-out;
-  will-change: height;
+  height: 0;
 }
 
 .compile-result, .question-user-input{
   white-space: pre;
  }
 .hidden {
-    max-height: 0;
-    transition: max-height 0.5s ease-in-out, padding 0.3s ease-in-out;
-    will-change:max-height;
+    height: 0;
+    transition: height 0.5s ease-in-out, padding 0.3s ease-in-out;
+    will-change:height;
     overflow: hidden;
 }
 .show {
-    height: 300px;
-    padding: 10px;
+    height: 200px;
+    padding: 20px;
 
 }
 .center{

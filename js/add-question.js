@@ -1,52 +1,53 @@
 accessAllowed('i', sessionStorage.Instructor);
 
-const paramCount = 1;
 let typeSelected = 'Type';
 let difficultySelected = 'All';
 const questionsSelected = [];
-const returnTypes = [
-    'int',
-    'String',
-    'float',
-    'double',
-    'boolean',
-    'char',
-    'void'
-];
+const returnTypes = ['int', 'String', 'float', 'double', 'boolean', 'char', 'void'];
 const problemTypes = ['None', 'For', 'While', 'Recursion', 'Overload'];
 const difficultyOptions = [
     {
         val: 1,
-        label: 'Easy'
+        label: 'Easy',
     }, {
         val: 2,
-        label: 'Medium'
+        label: 'Medium',
     }, {
         val: 3,
-        label: 'Hard'
-    }
+        label: 'Hard',
+    },
 ];
 
-const startup = (session) => {
-    showLoading(document.getElementById('question-bank-view'));
-    makeDifficultyOptions();
-    addParameter();
-    addSelectOptions();
-    makeTypeFilterOptions();
-    makeDifficultyFilterOptions();
+const QUESTION_INSERT_DIV = 'question-list';
+const QUESTION_BANK_DIV = 'question-bank-view';
+const PARAMETER_INSERT_DIV = 'parameter-section';
 
-    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
-        addQuestionsToView(questions.Questions);
+const makeProblemOptions = () => {
+    let divString = '';
+    problemTypes.forEach((problem) => {
+        divString += `<option value=${problem}>${problem}</option>`;
     });
+    return divString;
+};
+
+const makeReturnOptions = () => {
+    let divString = '';
+    returnTypes.forEach((type) => {
+        divString += `<option value=${type}>${type}</option>`;
+    });
+    return divString;
 };
 
 const addParameter = () => {
-    const parameterSection = document.getElementById('parameter-section');
-    for (let paramCount = 1; paramCount <= 4; paramCount++) {
-        const insertDiv = `<select name="Param${paramCount}_Type" id="param${paramCount}_Type" onchange="unlockParameters('${paramCount}');" ${paramCount !== 1
-            ? 'disabled': ''}><option value="" selected>Parameter${paramCount} Type</option>
-      ${makeReturnOptions()}
-    </select>,`;
+    const parameterSection = document.getElementById(PARAMETER_INSERT_DIV);
+    for (let paramCount = 1; paramCount <= 4; paramCount += 1) {
+        const insertDiv = `
+          <select name="Param${paramCount}_Type" id="param${paramCount}_Type"
+            onchange="unlockParameters('${paramCount}');" ${paramCount !== 1 ? 'disabled' : ''}>
+            <option value="" selected>Parameter${paramCount} Type</option>
+              ${makeReturnOptions()}
+        </select>,`;
+
         parameterSection.insertAdjacentHTML('beforeend', insertDiv);
     }
 };
@@ -58,7 +59,6 @@ const validation = () => {
         const div = document.getElementsByName(field)[0];
         if (div.value === '') {
             div.classList.add('reject');
-            //div.insertAdjacentHTML('afterend','<div class="reject">Required</div>')
             accepted = false;
         } else {
             div.classList.remove('reject');
@@ -77,15 +77,23 @@ const clearFields = () => {
         'Param2_Type',
         'Param3_Type',
         'Param4_Type',
-        'QuestionString'
+        'QuestionString',
     ];
     fields.forEach((field) => {
         document.getElementsByName(field)[0].value = '';
     });
 };
 
-const addQuestionsToView = function(questions) {
-    const questionBank = document.getElementById('question-list');
+const clearQuestionsBank = () => {
+    const deleteList = document.getElementById(QUESTION_INSERT_DIV).children;
+    for (let i = deleteList.length - 1; i >= 0; i -= 1) {
+        deleteList[i].parentNode.removeChild(deleteList[i]);
+    }
+};
+
+
+const addQuestionsToView = (questions) => {
+    const questionBank = document.getElementById(QUESTION_INSERT_DIV);
     clearQuestionsBank();
 
     questions.forEach((question) => {
@@ -94,31 +102,8 @@ const addQuestionsToView = function(questions) {
         newDiv.className = 'question';
         questionBank.appendChild(newDiv);
     });
-    
+
     doneLoading();
-};
-
-const clearQuestionsBank = () => {
-    const deleteList = document.getElementById('question-list').children;
-    for(let i = deleteList.length - 1; i>=0; i--){
-        deleteList[i].parentNode.removeChild(deleteList[i]);
-    }
-};
-
-const makeProblemOptions = () => {
-    let divString = '';
-    problemTypes.forEach((problem) => {
-        divString += `<option value=${problem}>${problem}</option>`;
-    });
-    return divString;
-};
-
-const makeReturnOptions = () => {
-    let divString = '';
-    returnTypes.forEach((type) => {
-        divString += `<option value=${type}>${type}</option>`;
-    });
-    return divString;
 };
 
 const addSelectOptions = () => {
@@ -130,13 +115,10 @@ const addSelectOptions = () => {
 
     problemDropdown.insertAdjacentHTML('beforeend', problemOptions);
     returnDropdown.insertAdjacentHTML('beforeend', returnOptions);
-
-
 };
 const unlockParameters = (index) => {
-    if (index === '4')
-        return;
-    document.getElementById(`param${parseInt(index) + 1}_Type`).disabled = false; //unlock next parameter
+    if (index === '4') { return; }
+    document.getElementById(`param${parseInt(index, 10) + 1}_Type`).disabled = false; // unlock next parameter
 };
 
 const makeDifficultyOptions = () => {
@@ -148,6 +130,40 @@ const makeDifficultyOptions = () => {
     difficultyDropdown.insertAdjacentHTML('beforeend', divString);
 };
 
+const onSelect = () => {
+    const difficulty = difficultySelected === 'All'
+        ? ''
+        : `${difficultySelected}`;
+    const type = typeSelected === 'Type'
+        ? ''
+        : `${typeSelected}`;
+    const postString = `Difficulty=${difficulty}&Type=${type}`;
+
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+
+    apiCall('getQuestions.php', postString)
+    .then(JSON.parse)
+    .then((questions) => {
+        if (questions.Questions === null) {
+            if (difficultySelected === 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${typeSelected} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} questions.`);
+            } else {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} ${typeSelected} questions.`);
+            }
+            doneLoading();
+            return;
+        }
+
+        closeMessage();
+        addQuestionsToView(questions.Questions);
+    })
+    .catch((err) => {
+        doneLoading();
+        showMessage('Sorry, something went wrong');
+    });
+};
 
 const onDifficultySelect = (event) => {
     difficultySelected = event.target.value;
@@ -157,35 +173,23 @@ const onDifficultySelect = (event) => {
 const onTypeSelect = (event) => {
     typeSelected = event.target.value;
     onSelect();
-
 };
 
-const onSelect = () => {
-    const difficulty = difficultySelected === 'All'
-        ? ''
-        : `${difficultySelected}`;
-    const type = typeSelected === 'Type'
-        ? ''
-        : `${typeSelected}`;
-    const postString = `Difficulty=${difficulty}&Type=${type}`;
-    showLoading(document.getElementById('question-bank-view'));
-    apiCall('getQuestions.php', postString).then(JSON.parse).then((questions) => {
-        if (questions.Questions === null) {
-            if (difficultySelected === 'All' && typeSelected !== 'Type') {
-                showMessage(`Sorry, there are no ${typeSelected} questions.`);
-            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
-                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected) - 1].label} questions.`);
-            } else {
-                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected) - 1].label} ${typeSelected} questions.`);
 
-            }
-            doneLoading();
-            return;
-        }
+const startup = (session) => {
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    makeDifficultyOptions();
+    addParameter();
+    addSelectOptions();
+    makeTypeFilterOptions();
+    makeDifficultyFilterOptions();
 
-        closeMessage();
+    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
         addQuestionsToView(questions.Questions);
-
+    })
+    .catch((err) => {
+        doneLoading();
+        showMessage('Sorry, something went wrong');
     });
 };
 
@@ -200,49 +204,34 @@ const onSubmit = (e) => {
         'Param1_Type',
         'Param2_Type',
         'Param3_Type',
-        'Param4_Type'
+        'Param4_Type',
     ];
 
     if (!validation()) {
         showMessage('Sorry, but not all the fields were filled out');
         return;
-    } else {
-        closeMessage();
     }
+    closeMessage();
 
-    const vowels = [
-        'a',
-        'e',
-        'i',
-        'o',
-        'u',
-        'A',
-        'E',
-        'I',
-        'O',
-        'U'
-    ];
+
+    const vowels = ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'];
 
     const returnVal = document.getElementsByName('ReturnType')[0].value;
     const returnString = vowels.includes(returnVal.charAt(0))
         ? `an ${returnVal}`
         : `a ${returnVal}`;
 
-    let params = new Array();
+    let params = [];
     params[0] = document.getElementsByName('Param1_Type')[0].value;
     params[1] = document.getElementsByName('Param2_Type')[0].value;
     params[2] = document.getElementsByName('Param3_Type')[0].value;
     params[3] = document.getElementsByName('Param4_Type')[0].value;
-    paramCount;
 
-    params = params.filter((param) => {
-        return param !== '';
-    });
+    params = params.filter(param => param !== '');
 
     let paramString = '';
     if (params.length > 1) {
         paramString = 'as parameters ';
-
     } else {
         paramString = 'as a parameter ';
     }
@@ -266,7 +255,6 @@ const onSubmit = (e) => {
                     ? `an ${param}`
                     : `a ${param}`;
                 paramString += `and ${lastParam}`;
-
             } else {
                 paramString += vowels.includes(param.charAt(0))
                     ? `an ${param}, `
@@ -281,18 +269,15 @@ const onSubmit = (e) => {
 
     const questionString = `Write a method named ${document.getElementsByName('MethodName')[0].value} that ${problemType}returns ${returnString}. The function takes in ${paramString} and should do the following: ${document.getElementsByName('QuestionString')[0].value}`;
 
-    let postString = fields.map((field) => {
-        return `${field}=${encodeURIComponent(document.getElementsByName(field)[0].value)}&`;
-    }).reduce((acc, val) => {
-        return acc + val;
-    }, '&');
-    postString += 'QuestionString=' + encodeURIComponent(questionString);
-    apiCall('addQuestion.php',postString).then(JSON.parse).then(res => {
-        if(res.success){
+    let postString = fields.map(field => `${field}=${encodeURIComponent(document.getElementsByName(field)[0].value)}&`).reduce((acc, val) => acc + val, '&');
+    postString += `QuestionString=${encodeURIComponent(questionString)}`;
+    console.log(postString);
+    apiCall('addQuestion.php', postString).then(JSON.parse).then((res) => {
+        if (res.success) {
             clearFields();
             showMessage('Your question was created successfully. You should add some test cases now.');
-        }
-        else{
+        } else {
+            console.log(res, 'network errors');
             showMessage('Sorry, there was an problem creating the question. Try again later.');
         }
     });

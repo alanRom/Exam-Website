@@ -2,7 +2,7 @@
     header('content-type: application/json; charset=utf-8');
     header("access-control-allow-origin: *");
     session_start();
-    $url="http://afsaccess1.njit.edu/~cme9/loginMiddle.php";
+    $url="https://web.njit.edu/~cme9/loginMiddle.php";
     $post = ['ID' => $_POST["ID"],
               'Password' => $_POST["Password"]];
     $ch = curl_init($url);

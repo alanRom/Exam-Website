@@ -1,3 +1,5 @@
+accessAllowed('i', sessionStorage.Instructor);
+
 let questionsLoaded = null;
 const questionSelectedText = '';
 let questionSelected = '';
@@ -8,20 +10,8 @@ const problemTypes = ['None', 'For', 'While', 'Recursion', 'Overload'];
 const difficultyOptions = [{ val: 1, label: 'Easy' }, { val: 2, label: 'Medium' }, { val: 3, label: 'Hard' }];
 const returnTypes = ['int', 'String', 'float', 'double', 'boolean'];
 
-const startup = (session) => {
-    if (!accessAllowed('i', session.Instructor)) return;
-    showLoading(document.getElementById('question-bank-view'));
-    ucid = session.UCID;
-    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
-        document.getElementById('bank-header').innerText = 'Choose a Question';
-        questionsLoaded = questions.Questions;
-
-        addQuestionsToBank();
-        makeTypeFilterOptions();
-        makeDifficultyFilterOptions();
-    });
-};
-
+const QUESTION_INSERT_DIV = 'question-list';
+const QUESTION_BANK_DIV = 'question-bank-view';
 
 const getQuestionIndex = (id) => {
     for (let i = questionsLoaded.length - 1; i >= 0; i -= 1) {
@@ -73,45 +63,10 @@ const validation = () => {
     return accept;
 };
 
-const onSubmit = (e) => {
-    e.preventDefault();
-
-    const fields = ['Param1', 'Param2', 'Param3', 'Param4', 'Output'];
-
-    if (!validation()) {
-        return;
-    }
-    let paramString = '';
-    for (let i = 0; i < 4; i++){
-        if(i !== 0 && document.getElementsByName(fields[i])[0].value !== '') {
-            paramString += ', ';
-        }
-
-        paramString += document.getElementsByName(fields[i])[0].value;
-    }
-
-    const testCaseDiv = `<div class="loaded-test-case">(${paramString}) => ${document.getElementsByName(fields[4])[0].value}<br /></div>`;
-
-    console.log(testCaseDiv);
-
-
-    let postString = fields.map(field => `${field}=${encodeURIComponent(document.getElementsByName(field)[0].value)}&`).reduce((acc, val) => acc + val, '&');
-    postString += `QuestionID=${questionSelected}`;
-    apiCall('addTestCase.php', postString).then(JSON.parse).then((res) => {
-        if (res.success) {
-            showMessage('The test case was created successfully');
-            document.getElementById('test-case-section').insertAdjacentHTML('beforeend', testCaseDiv);
-        } else {
-            showMessage('Sorry, something went wrong. Please try again later.');
-        }
-        window.scrollTo(0, 0);
-    });
-};
-
 
 const clearTestCases = () => {
     const deletingList = document.getElementsByClassName('loaded-test-case');
-    for(let j = deletingList.length -1 ; j >= 0 ; j --){
+    for (let j = deletingList.length - 1; j >= 0; j -= 1) {
         document.getElementById('test-case-section').removeChild(deletingList[j]);
     }
 };
@@ -119,11 +74,11 @@ const getTestCases = () => {
     clearTestCases();
     closeMessage();
     showLoading(document.getElementById('test-case-section'));
-    apiCall('getTestCases.php', `&QuestionID=${questionSelected}`).then(JSON.parse).then(result => {
+    apiCall('getTestCases.php', `&QuestionID=${questionSelected}`).then(JSON.parse).then((result) => {
         const divString = result['Test Cases'].map((tc) => {
             let paramString = '';
-            for (let i = 1; i <= 4; i++){
-                if(i !== 1 && tc[`Param${i}`] !== '') {
+            for (let i = 1; i <= 4; i += 1) {
+                if (i !== 1 && tc[`Param${i}`] !== '') {
                     paramString += ', ';
                 }
 
@@ -142,22 +97,13 @@ const getTestCases = () => {
   });
 };
 
-const chooseQuestion = (elem) => {
-    questionSelected = elem.dataset.qId;
-
-    changeHeader();
-    getTestCases();
-    clearForm();
-    removeParameters();
-    addParameter(getAvailableParams(elem.dataset.qId));
-};
 
 const clearForm = () => {
     const form = document.getElementsByTagName('form');
     if (form[0][2] === undefined) {
         return;
     }
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 5; i += 1) {
         form[0][i].value = '';
     }
 };
@@ -190,8 +136,8 @@ const makeReturnOptions = () => {
     return divString;
 };
 
-const addQuestionsToBank = function () {
-    const questionBank = document.getElementById('question-list');
+const addQuestionsToBank = () => {
+    const questionBank = document.getElementById(QUESTION_INSERT_DIV);
     questionsLoaded.forEach((question) => {
         const questionText = question.QuestionString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const id = question.id;
@@ -202,10 +148,50 @@ const addQuestionsToBank = function () {
 };
 
 const clearQuestionsBank = () => {
-    const deleteList = document.getElementById('question-list').children;
-    for(let i = deleteList.length - 1; i>=0; i--){
+    const deleteList = document.getElementById(QUESTION_INSERT_DIV).children;
+    for (let i = deleteList.length - 1; i >= 0; i -= 1) {
         deleteList[i].parentNode.removeChild(deleteList[i]);
     }
+};
+
+const chooseQuestion = (elem) => {
+    questionSelected = elem.dataset.qId;
+
+    changeHeader();
+    getTestCases();
+    clearForm();
+    removeParameters();
+    addParameter(getAvailableParams(elem.dataset.qId));
+};
+
+const onSelect = () => {
+    const difficulty = difficultySelected === 'All' ? '' : `${difficultySelected}`;
+    const type = typeSelected === 'Type' ? '' : `${typeSelected}`;
+    const postString = `Difficulty=${difficulty}&Type=${type}`;
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    apiCall('getQuestions.php', postString).then(JSON.parse).then((questions) => {
+        if (questions.Questions === null) {
+            if (difficultySelected === 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${typeSelected} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} questions.`);
+            } else if (difficultySelected !== 'All' && typeSelected !== 'Type') {
+                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected, 10) - 1].label} ${typeSelected} questions.`);
+            } else {
+                showMessage('Sorry, there are no questions :(');
+            }
+            doneLoading();
+            return;
+        }
+        questionsLoaded = questions.Questions;
+        closeMessage();
+        clearQuestionsBank();
+        addQuestionsToBank();
+    })
+    .catch((err) => {
+        doneLoading();
+        showMessage('Sorry, something went wrong');
+    });
 };
 
 const onDifficultySelect = (event) => {
@@ -218,28 +204,55 @@ const onTypeSelect = (event) => {
     onSelect();
 };
 
-const onSelect = () => {
-    const difficulty = difficultySelected === 'All' ? '' : `${difficultySelected}`;
-    const type = typeSelected === 'Type' ? '' : `${typeSelected}`;
-    const postString = `Difficulty=${difficulty}&Type=${type}`;
-    showLoading(document.getElementById('question-bank-view'));
-    apiCall('getQuestions.php', postString).then(JSON.parse).then((questions) => {
-        if (questions.Questions === null) {
-            if (difficultySelected === 'All' && typeSelected !== 'Type') {
-                showMessage(`Sorry, there are no ${typeSelected} questions.`);
-            } else if (difficultySelected !== 'All' && typeSelected === 'Type') {
-                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected) - 1].label} questions.`);
-            } else if (difficultySelected !== 'All' && typeSelected !== 'Type') {
-                showMessage(`Sorry, there are no ${difficultyOptions[parseInt(difficultySelected) - 1].label} ${typeSelected} questions.`);
-            } else {
-                showMessage('Sorry, there are no questions :(');
-            }
-            doneLoading();
-            return;
-        }
+
+const startup = (session) => {
+    showLoading(document.getElementById(QUESTION_BANK_DIV));
+    ucid = session.UCID;
+    apiCall('getQuestions.php').then(JSON.parse).then((questions) => {
+        document.getElementById('bank-header').innerText = 'Choose a Question';
         questionsLoaded = questions.Questions;
-        closeMessage();
-        clearQuestionsBank();
+
         addQuestionsToBank();
+        makeTypeFilterOptions();
+        makeDifficultyFilterOptions();
+    })
+    .catch((err) => {
+        doneLoading();
+        showMessage('Sorry, something went wrong. Please try again later.');
+    });
+};
+
+const onSubmit = (e) => {
+    e.preventDefault();
+
+    const fields = ['Param1', 'Param2', 'Param3', 'Param4', 'Output'];
+
+    if (!validation()) {
+        return;
+    }
+    let paramString = '';
+    for (let i = 0; i < 4; i += 1) {
+        if (i !== 0 && document.getElementsByName(fields[i])[0].value !== '') {
+            paramString += ', ';
+        }
+
+        paramString += document.getElementsByName(fields[i])[0].value;
+    }
+
+    const testCaseDiv = `<div class="loaded-test-case">(${paramString}) => ${document.getElementsByName(fields[4])[0].value}<br /></div>`;
+
+    console.log(testCaseDiv);
+
+
+    let postString = fields.map(field => `${field}=${encodeURIComponent(document.getElementsByName(field)[0].value)}&`).reduce((acc, val) => acc + val, '&');
+    postString += `QuestionID=${questionSelected}`;
+    apiCall('addTestCase.php', postString).then(JSON.parse).then((res) => {
+        if (res.success) {
+            showMessage('The test case was created successfully');
+            document.getElementById('test-case-section').insertAdjacentHTML('beforeend', testCaseDiv);
+        } else {
+            showMessage('Sorry, something went wrong. Please try again later.');
+        }
+        window.scrollTo(0, 0);
     });
 };
